@@ -1,0 +1,17 @@
+{
+    "include": ["src", "types"],
+    "compilerOptions": {
+        "module": "ESNext",
+        "target": "ESNext",
+        "moduleResolution": "node",
+        "jsx": "preserve",
+
+        "noEmit": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "allowSyntheticDefaultImports": true,
+
+        "types": ["snowpack-env"],
+        "outDir": "build"
+    }
+}
