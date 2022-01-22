@@ -5,7 +5,7 @@ export interface UnitOptions {
     prerequisites: Array<Array<Array<string> | string>>;
     selectedUnits: Array<number>;
     ul: HTMLElement;
-    updateOptions(select: HTMLInputElement):Promise<Boolean|string>;
+    updateOptions(select: HTMLInputElement): Promise<Boolean | string>;
     checkForScroll();
     clearOptions();
     openOptions();
@@ -35,7 +35,7 @@ export class UnitOptions {
         this.closeOptions();
     }
 
-    updateOptions(select: HTMLInputElement):Promise<Boolean> {
+    updateOptions(select: HTMLInputElement): Promise<Boolean> {
         return new Promise((resolve, reject) => {
             this.checkForScroll();
 
@@ -99,10 +99,9 @@ export class UnitOptions {
                 }
             } else {
                 this.closeOptions();
-                reject("No input provided.");
+                reject('No input provided.');
             }
         });
-
     }
 
     checkForScroll() {

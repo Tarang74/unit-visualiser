@@ -28,20 +28,16 @@ export class SidebarComponent {
             this.sidebar.classList.remove('sidebar-closed');
             this.sidebar.classList.add('sidebar-opened');
             // Wait for transition to end
-            this.sidebar.addEventListener(
-                transitionEvent(this.sidebar), () => {
-                    this.openSidebar();
-                }
-            );
+            this.sidebar.addEventListener(transitionEvent(this.sidebar), () => {
+                this.openSidebar();
+            });
         } else {
             this.sidebar.classList.remove('sidebar-opened');
             this.sidebar.classList.add('sidebar-closed');
             // Wait for transition to end
-            this.sidebar.addEventListener(
-                transitionEvent(this.sidebar), () => {
-                    this.closeSidebar();
-                }
-            );
+            this.sidebar.addEventListener(transitionEvent(this.sidebar), () => {
+                this.closeSidebar();
+            });
         }
     }
 

@@ -23,7 +23,7 @@ export default {
     },
     buildOptions: {
         baseUrl: '/',
-        out: 'build'
+        out: 'build/unit-visualiser/'
     },
     optimize: {
         minify: true,

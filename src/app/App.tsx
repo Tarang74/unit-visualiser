@@ -51,7 +51,7 @@ export class Canvas {
             if (self.selectElement.value == '') {
                 return;
             }
-            
+
             unitSelector.updateOptions(this.selectElement).then(
                 (resolveValue) => {
                     if (resolveValue) {
