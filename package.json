@@ -30,7 +30,7 @@
         "build": "snowpack build",
         "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
         "lint": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\"",
-        "gh-push": "gh-pages -d build -b gh-pages -m"
+        "gh-push": "gh-pages -d build/unit-visualiser -b gh-pages -m"
     },
     "name": "unitvisualiser",
     "description": "Unit Visualiser for QUT units.",

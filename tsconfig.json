@@ -10,7 +10,7 @@
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
         "allowSyntheticDefaultImports": true,
-
+        
         "types": ["snowpack-env"],
         "outDir": "build"
     }

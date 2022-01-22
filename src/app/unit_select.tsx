@@ -1,4 +1,4 @@
-import data from './parsed_data2022.json';
+import data from './parsed_data2022';
 
 export interface UnitOptions {
     units: Array<string>;

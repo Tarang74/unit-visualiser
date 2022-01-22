@@ -1,4 +1,4 @@
-{
+const data = {
     "Units": [
         {
             "prerequisites": [],
@@ -10611,3 +10611,5 @@
         }
     ]
 }
+
+export default data;

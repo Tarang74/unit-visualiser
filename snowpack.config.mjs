@@ -1,8 +1,8 @@
 /** @type {import("snowpack").SnowpackUserConfig } */
 export default {
     mount: {
-        public: { url: '/', static: true },
-        src: { url: '/dist', dot: true }
+        public: { url: '/unit-visualiser', static: true },
+        src: { url: '/unit-visualiser/dist', dot: true }
     },
     plugins: [
         '@snowpack/plugin-react-refresh',
@@ -18,12 +18,13 @@ export default {
         '@snowpack/plugin-postcss'
     ],
     devOptions: {
+        openUrl: '/unit-visualiser/',
         port: 8080,
         tailwindConfig: './tailwind.config.js'
     },
     buildOptions: {
-        baseUrl: '/',
-        out: 'build/unit-visualiser/'
+        baseUrl: '/unit-visualiser',
+        out: 'build'
     },
     optimize: {
         minify: true,
