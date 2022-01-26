@@ -1,83 +1,88 @@
-import data from './parsed_data2022';
+import {
+    UNIT_CODES,
+    UNIT_CREDIT_POINTS,
+    UNIT_NAMES,
+    UNIT_PREREQUISITES,
+    UNIT_STUDY_AREAS,
+    TOTAL_UNITS
+} from '@assets/data/Unit Data';
 
 export interface UnitOptions {
-    units: Array<string>;
-    prerequisites: Array<Array<Array<string> | string>>;
     selectedUnits: Array<number>;
     ul: HTMLElement;
-    updateOptions(select: HTMLInputElement): Promise<Boolean | string>;
-    checkForScroll();
-    clearOptions();
-    openOptions();
-    closeOptions();
-    addUnitsToSelection(s: number);
-    removeUnitFromSelection(unit: number);
-    getUnitData(): Unit[];
+    updateOptions(s: string): Promise<Boolean>;
+    checkForScroll(): void;
+    clearOptions(): void;
+    openOptions(): void;
+    closeOptions(): void;
+    addUnitsToSelection(s: number): void;
+    removeUnitFromSelection(unit: number): void;
+    getUnitPrerequisites(
+        unitIndices: Array<number>,
+        output: Array<Unit>
+    ): Array<Unit>;
 }
 
 export class UnitOptions {
     constructor() {
-        // Units and corresponding prerequisites
-        this.units = [];
-        this.prerequisites = [];
-
-        data.Units.forEach((value, index, array) => {
-            this.units.push(value.unit_code);
-            this.prerequisites.push(value.prerequisites);
-        });
-
         this.selectedUnits = [];
 
         // Options list
-        this.ul = document.getElementById('select-options');
+        this.ul = document.getElementById('select-options')!;
 
         // Initialise ul
         this.closeOptions();
     }
 
-    updateOptions(select: HTMLInputElement): Promise<Boolean> {
+    updateOptions(s: string): Promise<Boolean> {
         return new Promise((resolve, reject) => {
             this.checkForScroll();
 
-            var input: string = select.value.toUpperCase();
+            if (s == '') {
+                this.closeOptions();
+                reject('No input provided.');
+            } else {
+                var input: string = s.toUpperCase();
 
-            if (input != '') {
                 let hidden: number = 0;
                 let visible: Array<number> = [];
 
                 this.openOptions();
 
-                for (let i = 0; i < this.units.length; i++) {
-                    if (this.units[i].indexOf(input) > -1) {
+                for (let i = 0; i < TOTAL_UNITS; i++) {
+                    if (
+                        UNIT_CODES[i].includes(input) ||
+                        UNIT_NAMES[i].toUpperCase().includes(input)
+                    ) {
                         visible.push(i);
                     } else {
                         hidden++;
                     }
                 }
 
-                if (hidden == this.units.length) {
-                    // No units found
+                if (hidden == TOTAL_UNITS) {
+                    // No matches found
                     this.closeOptions();
                     resolve(false);
                 } else {
                     let li: Array<HTMLElement> = [];
-                    for (let i = 0; i < visible.length; i++) {
+                    visible.forEach((value, index) => {
                         let a1: HTMLAnchorElement = document.createElement('a');
-                        a1.textContent = this.units[visible[i]];
+                        a1.textContent = UNIT_CODES[value];
 
                         let a2: HTMLAnchorElement = document.createElement('a');
-                        a2.textContent = 'Unit Name';
+                        a2.textContent = UNIT_NAMES[value];
 
                         let div: HTMLDivElement = document.createElement('div');
                         div.appendChild(a1);
                         div.appendChild(a2);
 
-                        li[i] = document.createElement('li');
-                        li[i].id = visible[i].toString();
-                        li[i].appendChild(div);
+                        li[index] = document.createElement('li');
+                        li[index].id = value.toString();
+                        li[index].appendChild(div);
 
-                        this.ul.appendChild(li[i]);
-                    }
+                        this.ul.appendChild(li[index]);
+                    });
 
                     li.forEach((element) => {
                         element.addEventListener(
@@ -97,19 +102,16 @@ export class UnitOptions {
                         });
                     });
                 }
-            } else {
-                this.closeOptions();
-                reject('No input provided.');
             }
         });
     }
 
     checkForScroll() {
-        let selectContainer = document.getElementById('select-units-container');
+        let selectContainer = document.getElementById('select-units-container')!;
         let dim = selectContainer.getBoundingClientRect();
         let top = dim.y + dim.height;
 
-        this.ul.parentElement.style.top = `${top.toString()}px`;
+        this.ul.parentElement!.style.top = `${top.toString()}px`;
     }
 
     clearOptions() {
@@ -135,15 +137,33 @@ export class UnitOptions {
         this.selectedUnits.splice(this.selectedUnits.indexOf(unit));
     }
 
-    getUnitData(): Unit[] {
+    getUnitPrerequisites(unitIndices: Array<number>, output: Array<Unit> = []): Array<Unit> {
         // Use indices to find nodes (and children)
-        var recursiveUnits: Unit[] = [];
-        for (let i = 0; i < this.selectedUnits.length; i++) {
+        var recursiveUnits: Array<Unit> = [];
+
+
+
+        for (let i = 0; i < unitIndices.length; i++) {
             recursiveUnits.push([
-                this.units[this.selectedUnits[i]],
-                this.prerequisites[this.selectedUnits[i]]
+                UNIT_CODES[unitIndices[i]],
+                UNIT_PREREQUISITES[unitIndices[i]]
             ]);
         }
         return recursiveUnits;
     }
+
+}
+
+export function getUnitData(indices: Array<number>): Array<[string, string, number]> {
+    var output:Array<[string, string, number]> = [];
+
+    indices.forEach((value) => {
+        output.push([
+            UNIT_CODES[value],
+            UNIT_NAMES[value],
+            UNIT_CREDIT_POINTS[value]
+        ]);
+    });
+
+    return output;
 }

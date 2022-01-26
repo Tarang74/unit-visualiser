@@ -9,5 +9,3 @@ type NetworkNode = {
         group: number;
     }>;
 };
-
-type Unit = [string, Array<Array<string> | string>];

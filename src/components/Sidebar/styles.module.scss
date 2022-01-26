@@ -35,7 +35,11 @@
     right: -4rem;
 }
 
-.select-options-ul {
+#select-options-container {
+    box-shadow: 0px 1rem 4rem 1.5px rgba(25, 25, 25, 0.5);
+}
+
+#select-options {
     overflow: overlay;
     li:first-of-type {
         border-top: 0.25px solid transparent;
@@ -70,8 +74,10 @@
             }
             a:nth-of-type(1) {
                 font-size: larger;
+                font-weight: 500;
             }
             a:nth-of-type(2) {
+                line-height: 1rem;
                 font-size: small;
             }
         }

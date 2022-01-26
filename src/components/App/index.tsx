@@ -1,8 +1,22 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 
-import { UnitOptions } from './unit_select';
+import { getUnitData, UnitOptions } from '../../services/unitSelection';
 import * as d3 from 'd3';
 import { D3DragEvent, SimulationNodeDatum, SubjectPosition } from 'd3';
+
+import classnames, {
+    alignItems,
+    backgroundColor,
+    display,
+    fontSize,
+    height,
+    justifyContent,
+    overflow,
+    textAlign,
+    textColor,
+    width
+} from '../../types/tailwindcss-classnames';
 
 import './App.scss';
 
@@ -10,8 +24,11 @@ export interface Canvas {
     svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
     width: number;
     height: number;
+    displayedUnits: Array<number>;
     selectElement: HTMLInputElement;
-    output: NetworkNode;
+
+    updateNodes(newNodes: Array<number>): void;
+    removeChildNodes(parent: HTMLElement): void;
     updateCanvas(json: NetworkNode): void;
     findNodesRecursively(l: Unit[]): Array<[string, number, number]>;
 }
@@ -20,6 +37,7 @@ export class Canvas {
     constructor(container: HTMLElement) {
         this.width = container.clientWidth;
         this.height = container.clientHeight;
+        this.displayedUnits = [];
 
         this.svg = d3
             .select(container)
@@ -30,14 +48,17 @@ export class Canvas {
         this.svg
             .append('defs')
             .append('marker')
-            .attr('id', 'arrow')
-            .attr('viewBox', [0, 0, 20, 20])
-            .attr('refX', 10)
-            .attr('refY', 10)
-            .attr('markerWidth', 10)
-            .attr('markerHeight', 10)
-            .attr('orient', 'auto-start-reverse')
-            .append('line');
+            .attr('id', 'arrowhead')
+            .attr('class', 'arrowhead')
+            .attr('viewBox', [0, -5, 10, 10])
+            .attr('refX', 13)
+            .attr('refY', 0)
+            .attr('orient', 'auto')
+            .attr('markerWidth', 13)
+            .attr('markerHeight', 13)
+            .attr('x-overflow', 'visible')
+            .append('svg:path')
+            .attr('d', 'M0,-5L10,0L0,5');
 
         this.selectElement = document.getElementById(
             'select-units'
@@ -52,17 +73,18 @@ export class Canvas {
                 return;
             }
 
-            unitSelector.updateOptions(this.selectElement).then(
+            unitSelector.updateOptions(this.selectElement.value).then(
                 (resolveValue) => {
                     if (resolveValue) {
-                        var requiredNodes: Unit[] = [];
-                        requiredNodes = unitSelector.getUnitData();
-                        self.output = self.formatNode(
+                        var requiredNodes = unitSelector.getUnitPrerequisites(unitSelector.selectedUnits);
+
+                        var output = self.formatNode(
                             self.findNodesRecursively(requiredNodes)
                         );
 
-                        console.log(self.output);
-                        self.updateCanvas(self.output);
+                        console.log(output);
+                        self.updateNodes(unitSelector.selectedUnits);
+                        self.updateCanvas(output);
                     }
                 },
                 (rejectValue) => {
@@ -76,16 +98,70 @@ export class Canvas {
         });
     }
 
-    updateCanvas(json: NetworkNode) {
+    updateNodes(newNodes: Array<number>): void {
+        let container = document.getElementById('displayed-units-container');
+        if (!newNodes) return this.removeChildNodes(container);
+
+        let nodeData = getUnitData(newNodes);
+
+        const Nodes = () => (
+            <>
+                {nodeData.map((value) => (
+                    <li key={value[0]} id={value[0]}>
+                        <div>
+                            <a>{value[0]}</a>
+                            <a>{value[1]}</a>
+                        </div>
+                        <div>{value[2]}</div>
+                    </li>
+                ))}
+            </>
+        );
+
+        ReactDOM.render(
+            <React.StrictMode>
+                <div
+                    className={classnames(
+                        textAlign('text-left'),
+                        fontSize('text-lg'),
+                        textColor('text-gray-100'),
+                        width('w-full')
+                    )}
+                >
+                    Displayed Units:
+                </div>
+                <div
+                    className={classnames(
+                        height('h-32'),
+                        overflow('overflow-y-auto')
+                    )}
+                >
+                    <ul>
+                        <Nodes />
+                    </ul>
+                </div>
+                ,
+            </React.StrictMode>,
+            container
+        );
+    }
+
+    removeChildNodes(parent: HTMLElement): void {
+        while (parent.firstChild) {
+            parent.removeChild(parent.firstChild);
+        }
+    }
+
+    updateCanvas(data: NetworkNode) {
         // Simulation object
         var simulation = d3.forceSimulation(
-            json.nodes as d3.SimulationNodeDatum[]
+            data.nodes as d3.SimulationNodeDatum[]
         );
 
         // Forces
-        var chargeForce = d3.forceManyBody().strength(-200);
-        var centerForce = d3.forceCenter(this.width / 2, this.height / 2);
-        var linkForce = d3.forceLink(json.links).id((d: any) => d.name);
+        var chargeForce = d3.forceManyBody().strength(-400);
+        var centerForce = d3.forceCenter(this.width / 10, this.height / 10);
+        var linkForce = d3.forceLink(data.links).id((d: any) => d.name);
 
         simulation
             .force('charge_force', chargeForce)
@@ -100,7 +176,7 @@ export class Canvas {
             .append('g')
             .attr('class', 'nodes')
             .selectAll('.nodes')
-            .data(json.nodes)
+            .data(data.nodes)
             .enter()
             .append('g')
             .attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
@@ -128,12 +204,11 @@ export class Canvas {
             .append('g')
             .attr('class', 'links')
             .selectAll('.links')
-            .data(json.links)
+            .data(data.links)
             .enter()
             .append('line')
-            .attr('class', 'disjunctive-group')
-            .attr('marker-start', 'url(#arrow)')
-            .attr('fill', 'none');
+            .attr('class', 'link')
+            .attr('marker-end', 'url(#arrowhead)');
 
         // Global events
         var dragHandler = d3
@@ -268,7 +343,14 @@ export default function App() {
     return (
         <div
             id="app"
-            className="app flex justify-center items-center bg-slate-100 w-screen h-screen"
+            className={classnames(
+                display('flex'),
+                justifyContent('justify-center'),
+                alignItems('items-center'),
+                backgroundColor('bg-slate-100'),
+                width('w-screen'),
+                height('h-screen')
+            )}
         ></div>
     );
 }

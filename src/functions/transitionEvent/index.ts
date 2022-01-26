@@ -7,8 +7,9 @@ export default function transitionEvent(e: HTMLElement) {
     };
 
     let t;
+    
     for (t in transitions) {
-        if (e.style[t] !== undefined) {
+        if (e.style[t as any] !== undefined) {
             return transitions[t];
         }
     }
