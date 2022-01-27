@@ -3,7 +3,10 @@
         "paths": {
             "@assets/*": ["./src/assets/*"],
             "@components/*": ["./src/components/*"],
-            "types/*": ["./src/types/*"]
+            "@functions/*": ["./src/functions/*"],
+            "@services/*": ["./src/services/*"],
+            "@testing/*": ["./src/testing/*"],
+            "@types/*": ["./src/types/*"]
         }
     }
 }

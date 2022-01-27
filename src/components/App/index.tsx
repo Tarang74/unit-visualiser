@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { getUnitData, UnitOptions } from '../../services/unitSelection';
+import { getUnitData, UnitOptions } from '@services/unitSelection';
 import * as d3 from 'd3';
-import { D3DragEvent, SimulationNodeDatum, SubjectPosition } from 'd3';
+import { SimulationNodeDatum } from 'd3';
 
 import classnames, {
     alignItems,
@@ -16,9 +16,9 @@ import classnames, {
     textAlign,
     textColor,
     width
-} from '../../types/tailwindcss-classnames';
+} from '@assets/tailwindcss-classnames';
 
-import './App.scss';
+import './styles.scss';
 
 export interface Canvas {
     svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
@@ -60,9 +60,9 @@ export class Canvas {
             .append('svg:path')
             .attr('d', 'M0,-5L10,0L0,5');
 
-        this.selectElement = document.getElementById(
-            'select-units'
-        ) as HTMLInputElement;
+        let selectElement = document.getElementById('select-units');
+        if (selectElement)
+            this.selectElement = selectElement as HTMLInputElement;
 
         let unitSelector = new UnitOptions();
 
@@ -76,7 +76,9 @@ export class Canvas {
             unitSelector.updateOptions(this.selectElement.value).then(
                 (resolveValue) => {
                     if (resolveValue) {
-                        var requiredNodes = unitSelector.getUnitPrerequisites(unitSelector.selectedUnits);
+                        var requiredNodes = unitSelector.getUnitPrerequisites(
+                            unitSelector.selectedUnits
+                        );
 
                         var output = self.formatNode(
                             self.findNodesRecursively(requiredNodes)
@@ -100,8 +102,9 @@ export class Canvas {
 
     updateNodes(newNodes: Array<number>): void {
         let container = document.getElementById('displayed-units-container');
-        if (!newNodes) return this.removeChildNodes(container);
+        if (!container) return;
 
+        if (!newNodes) return this.removeChildNodes(container);
         let nodeData = getUnitData(newNodes);
 
         const Nodes = () => (
@@ -177,9 +180,12 @@ export class Canvas {
             .attr('class', 'nodes')
             .selectAll('.nodes')
             .data(data.nodes)
-            .enter()
-            .append('g')
-            .attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
+            .enter();
+
+        node.append('g').attr(
+            'transform',
+            (d: any) => `translate(${d.x}, ${d.y})`
+        );
 
         // Node rect
         node.append('rect')
@@ -202,61 +208,33 @@ export class Canvas {
         // Link line
         var link = g
             .append('g')
-            .attr('class', 'links')
+            .attr('class', 'link')
             .selectAll('.links')
             .data(data.links)
-            .enter()
-            .append('line')
+            .enter();
+        link.append('line')
             .attr('class', 'link')
             .attr('marker-end', 'url(#arrowhead)');
 
         // Global events
-        var dragHandler = d3
-            .drag()
-            .on(
-                'start',
-                (
-                    event: D3DragEvent<
-                        SVGSVGElement,
-                        SimulationNodeDatum,
-                        SubjectPosition
-                    >,
-                    d: d3.SimulationNodeDatum
-                ) => {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    d.fx = d.x;
-                    d.fy = d.y;
-                }
-            )
-            .on(
-                'drag',
-                (
-                    event: D3DragEvent<
-                        SVGSVGElement,
-                        SimulationNodeDatum,
-                        SubjectPosition
-                    >,
-                    d: d3.SimulationNodeDatum
-                ) => {
-                    d.fx = event.x;
-                    d.fy = event.y;
-                }
-            )
-            .on(
-                'end',
-                (
-                    event: D3DragEvent<
-                        SVGSVGElement,
-                        SimulationNodeDatum,
-                        SubjectPosition
-                    >,
-                    d: d3.SimulationNodeDatum
-                ) => {
-                    if (!event.active) simulation.alphaTarget(0);
-                    d.fx = null;
-                    d.fy = null;
-                }
-            );
+        var dragHandler = d3.drag<SVGElement, SimulationNodeDatum>();
+
+        dragHandler
+            .on('start', (event: any, d: SimulationNodeDatum) => {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            })
+            .on('drag', (event: any, d: SimulationNodeDatum) => {
+                d.fx = event.x;
+                d.fy = event.y;
+            })
+            .on('end', (event: any, d: SimulationNodeDatum) => {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            });
+
         dragHandler(node);
 
         var zoomHandler = d3

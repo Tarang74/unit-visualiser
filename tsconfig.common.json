@@ -9,15 +9,17 @@
         "resolveJsonModule": true,
         "allowSyntheticDefaultImports": true,
 
-        "outDir": "build",
+        "outDir": "dist",
 
         "useDefineForClassFields": true,
         "lib": ["DOM", "DOM.Iterable", "ESNext"],
         "allowJs": false,
-        "skipLibCheck": false,
         "esModuleInterop": false,
-        "strict": true,
         "isolatedModules": true,
+
+        "skipLibCheck": false,
+        "strict": true,
+        
     },
     "extends": "./tsconfig.paths.json"
 }

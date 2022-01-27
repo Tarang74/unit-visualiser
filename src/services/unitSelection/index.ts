@@ -1,8 +1,11 @@
+import JestInstance from '@services/JestInstance';
+
 import {
     UNIT_CODES,
     UNIT_CREDIT_POINTS,
     UNIT_NAMES,
     UNIT_PREREQUISITES,
+    UNIT_PREREQUISITE_INDICES,
     UNIT_STUDY_AREAS,
     TOTAL_UNITS
 } from '@assets/data/Unit Data';
@@ -17,14 +20,16 @@ export interface UnitOptions {
     closeOptions(): void;
     addUnitsToSelection(s: number): void;
     removeUnitFromSelection(unit: number): void;
-    getUnitPrerequisites(
+    getUnitPrerequisites(unitIndices: Array<number>): Array<Unit>;
+    findUnitsRecursively(
         unitIndices: Array<number>,
-        output: Array<Unit>
-    ): Array<Unit>;
+        data?: Array<Array<number | Array<number>>>
+    ): Set<number>;
 }
 
 export class UnitOptions {
     constructor() {
+        if (JestInstance()) return;
         this.selectedUnits = [];
 
         // Options list
@@ -107,7 +112,9 @@ export class UnitOptions {
     }
 
     checkForScroll() {
-        let selectContainer = document.getElementById('select-units-container')!;
+        let selectContainer = document.getElementById(
+            'select-units-container'
+        )!;
         let dim = selectContainer.getBoundingClientRect();
         let top = dim.y + dim.height;
 
@@ -137,11 +144,11 @@ export class UnitOptions {
         this.selectedUnits.splice(this.selectedUnits.indexOf(unit));
     }
 
-    getUnitPrerequisites(unitIndices: Array<number>, output: Array<Unit> = []): Array<Unit> {
+    getUnitPrerequisites(unitIndices: Array<number>): Array<Unit> {
+        let recursiveIndices = this.findUnitsRecursively(unitIndices);
+
         // Use indices to find nodes (and children)
         var recursiveUnits: Array<Unit> = [];
-
-
 
         for (let i = 0; i < unitIndices.length; i++) {
             recursiveUnits.push([
@@ -152,10 +159,36 @@ export class UnitOptions {
         return recursiveUnits;
     }
 
+    findUnitsRecursively(
+        unitIndices: Array<number>,
+        data?: Array<Array<number | Array<number>>>
+    ): Set<number> {
+        if (!data) data = UNIT_PREREQUISITE_INDICES;
+        let output: Set<number> = new Set<number>([]);
+        unitIndices.forEach((value) => {
+            output.add(value);
+        });
+
+        for (let i = 0; i < unitIndices.length; i++) {
+            data[unitIndices[i]].forEach((value) => {
+                if (typeof value === 'number') {
+                    output.add(value);
+                } else {
+                    value.forEach((value1) => {
+                        output.add(value1);
+                    });
+                }
+            });
+        }
+
+        return output;
+    }
 }
 
-export function getUnitData(indices: Array<number>): Array<[string, string, number]> {
-    var output:Array<[string, string, number]> = [];
+export function getUnitData(
+    indices: Array<number>
+): Array<[string, string, number]> {
+    var output: Array<[string, string, number]> = [];
 
     indices.forEach((value) => {
         output.push([

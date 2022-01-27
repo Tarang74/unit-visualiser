@@ -1,16 +1,14 @@
 export default function transitionEvent(e: HTMLElement) {
-    var transitions = {
-        transition: 'transitionend',
-        OTransition: 'oTransitionEnd',
-        MozTransition: 'transitionend',
-        WebkitTransition: 'webkitTransitionEnd'
-    };
+    const transitions = new Map([
+        ['transition', 'transitionend'],
+        ['OTransition', 'oTransitionEnd'],
+        ['MozTransition', 'transitionend'],
+        ['WebkitTransition', 'webkitTransitionEnd']
+    ] as const);
 
-    let t;
-    
-    for (t in transitions) {
-        if (e.style[t as any] !== undefined) {
-            return transitions[t];
+    for (const t of transitions.keys()) {
+        if (e.style.getPropertyValue(t) !== undefined) {
+            return transitions.get(t);
         }
     }
 }

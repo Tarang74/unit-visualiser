@@ -1,4 +1,4 @@
-import transitionEvent from '../../functions/transitionEvent';
+import transitionEvent from '@functions/transitionEvent';
 
 import classnames, {
     alignItems,
@@ -21,9 +21,9 @@ import classnames, {
     textAlign,
     textColor,
     width
-} from 'types/tailwindcss-classnames';
+} from '@assets/tailwindcss-classnames';
 
-import styles from './styles.module.scss';
+import './styles.scss';
 
 export interface SidebarComponent {
     sidebarOpen: Boolean;
@@ -51,17 +51,25 @@ export class SidebarComponent {
         if (!this.sidebarOpen) {
             this.sidebar.classList.remove('sidebar-closed');
             this.sidebar.classList.add('sidebar-opened');
+
             // Wait for transition to end
-            this.sidebar.addEventListener(transitionEvent(this.sidebar), () => {
-                this.openSidebar();
-            });
+            let t = transitionEvent(this.sidebar);
+            if (t) {
+                this.sidebar.addEventListener(t, () => {
+                    this.openSidebar();
+                });
+            }
         } else {
             this.sidebar.classList.remove('sidebar-opened');
             this.sidebar.classList.add('sidebar-closed');
+
             // Wait for transition to end
-            this.sidebar.addEventListener(transitionEvent(this.sidebar), () => {
-                this.closeSidebar();
-            });
+            let t = transitionEvent(this.sidebar);
+            if (t) {
+                this.sidebar.addEventListener(t, () => {
+                    this.closeSidebar();
+                });
+            }
         }
     }
 
@@ -107,7 +115,6 @@ export default function Sidebar() {
                 <img
                     id="sidebar-btn-icon"
                     className={classnames(height('h-full'), width('w-full'))}
-                    src="assets/images/arrow_right.svg"
                 />
             </div>
             <div
@@ -186,9 +193,10 @@ export default function Sidebar() {
                     </div>
                 </div>
                 {/* Displayed Units */}
-                <div id="displayed-units-container" className={classnames(width('w-full'))}>
-                    
-                </div>
+                <div
+                    id="displayed-units-container"
+                    className={classnames(width('w-full'))}
+                ></div>
                 {/* Units Description
                 <div className={classnames(width('w-full'))}>
                     <div

@@ -8,8 +8,10 @@ import classnames, {
     inset,
     opacity,
     position
-} from 'types/tailwindcss-classnames';
+} from '@assets/tailwindcss-classnames';
 
+import d3Logo from '@assets/icons/d3_js.svg';
+import arrowIcon from '@assets/icons/arrow_right.svg';
 import '@assets/styles/index.scss';
 
 let p = new Promise((resolve) => {
@@ -18,7 +20,6 @@ let p = new Promise((resolve) => {
             <App />
             <Sidebar />
             <img
-                src="./assets/images/d3_js.svg"
                 id="d3-logo"
                 className={classnames(
                     position('absolute'),
@@ -36,12 +37,19 @@ let p = new Promise((resolve) => {
 });
 
 function main() {
-    new SidebarComponent(
-        document.getElementById('sidebar')!,
-        document.getElementById('sidebar-btn')!
-    );
+    let img = document.getElementById('d3-logo');
+    if (img) (img as HTMLImageElement).src = d3Logo;
 
-    new Canvas(document.getElementById('app')!);
+    let sidebar = document.getElementById('sidebar');
+    let sidebarBtn = document.getElementById('sidebar-btn');
+
+    if (sidebar && sidebarBtn) new SidebarComponent(sidebar, sidebarBtn);
+
+    let img2 = document.getElementById('sidebar-btn-icon');
+    if (img2) (img2 as HTMLImageElement).src = arrowIcon;
+
+    let app = document.getElementById('app');
+    if (app) new Canvas(app);
 }
 
 p.then(main);
