@@ -18,6 +18,7 @@ import classnames, {
 } from '@assets/tailwindcss-classnames';
 
 import './styles.scss';
+import { SimulationNodeDatum } from 'd3';
 
 export interface Canvas {
     svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
@@ -39,7 +40,9 @@ export interface Canvas {
         linkData: Array<NetworkLink>
     ): void;
 
-    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitPrerequisiteLink>;
+    findNodesRecursively(
+        units: Array<UnitPrerequisite>
+    ): Array<UnitPrerequisiteLink>;
     formatNode(
         unitLinks: Array<UnitPrerequisiteLink>
     ): [Array<NetworkNode>, Array<NetworkLink>];
@@ -76,7 +79,9 @@ export class Canvas {
 
         // Main group
         this.group = this.svg.append('g').attr('class', 'zoom-group');
+
         this.nodes = this.group.append('g').attr('class', 'nodes');
+        this.links = this.group.append('g').attr('class', 'links');
 
         this.updateVariables(container);
         window.onresize = () => {
@@ -99,19 +104,20 @@ export class Canvas {
             unitSelector.updateOptions(this.selectElement.value).then(
                 (resolveValue) => {
                     if (resolveValue) {
-                        var allRequiredNodes =
-                            unitSelector.getUnitPrerequisites(
+                        let recursiveNodes =
+                            unitSelector.findPrerequisitesRecursively(
                                 unitSelector.selectedUnits
                             );
 
-                        var [nodeData, linkData] = self.formatNode(
-                            self.findNodesRecursively(allRequiredNodes)
-                        );
+                        self.updateNodes(recursiveNodes);
 
-                        self.updateNodes(
-                            unitSelector.findPrerequisitesRecursively(
-                                unitSelector.selectedUnits
-                            )
+                        var nodePrerequisites =
+                            unitSelector.getUnitPrerequisites(recursiveNodes);
+
+                        console.log(nodePrerequisites);
+
+                        var [nodeData, linkData] = self.formatNode(
+                            self.findNodesRecursively(nodePrerequisites)
                         );
 
                         console.log(nodeData);
@@ -138,7 +144,7 @@ export class Canvas {
         if (!newNodes) return this.removeChildrenFromElement(container);
         let nodeData = getUnitInfo(newNodes);
 
-        console.log(nodeData);
+        // console.log(nodeData);
 
         const Nodes = () => (
             <>
@@ -191,100 +197,104 @@ export class Canvas {
         nodeData: Array<NetworkNode>,
         linkData: Array<NetworkLink>
     ): void {
-        // // Simulation object
-        // var simulation = d3.forceSimulation(
-        //     data.nodes as d3.SimulationNodeDatum[]
-        // );
+        // Simulation object
+        var simulation = d3.forceSimulation<NetworkNode>(nodeData);
 
-        // // Forces
-        // var chargeForce = d3.forceManyBody().strength(-400);
-        // var centerForce = d3.forceCenter(this.width / 10, this.height / 10);
-        // var linkForce = d3.forceLink(data.links).id((d: any) => d.name);
+        // Forces
+        var chargeForce = d3.forceManyBody().strength(-400);
+        var centerForce = d3.forceCenter(this.width / 10, this.height / 10);
+        var linkForce = d3.forceLink(linkData).id((d) => d.index!);
 
-        // simulation
-        //     .force('charge_force', chargeForce)
-        //     .force('center_force', centerForce)
-        //     .force('links', linkForce);
+        simulation
+            .force('charge_force', chargeForce)
+            .force('center_force', centerForce)
+            .force('links', linkForce);
 
         // Node group
-        var node = this.nodes.selectAll('.nodes').data(nodeData).enter();
+        this.nodes.selectAll('.node').data(nodeData).enter();
 
-        // node.append('g').attr(
-        //     'transform',
-        //     (d: any) => `translate(${d.x}, ${d.y})`
-        // );
+        this.nodes
+            .append('g')
+            .attr('transform', (d) => `translate(${d.x}, ${d.y})`);
 
         // Node rect
-        node.append('rect')
+        this.nodes
+            .append('rect')
             .attr('class', 'node')
             .attr('height', 15)
-            .style('fill', (d) => (d.group != undefined ? d.group : 'blue'));
+            .style('fill', 'blue');
+
+        const textFunction = (d: NetworkNode) => d.code;
 
         // Node text
-        node.append('text')
+        this.nodes
+            .append('text')
             // .merge(node)
-            .text((d) => d.code)
+            .text(textFunction)
             .style('font-size', '12px')
             .attr('dy', '1em');
 
-        node.attr(
+        this.nodes.attr(
             'width',
             20
             // (d) => this.childNodes[1].getComputedTextLength() + 20
         );
 
-        // // Link line
-        // var link = g
-        //     .append('g')
-        //     .attr('class', 'link')
-        //     .selectAll('.links')
-        //     .data(data.links)
-        //     .enter();
-        // link.append('line')
-        //     .attr('class', 'link')
-        //     .attr('marker-end', 'url(#arrowhead)');
+        // Link line
+        this.links.selectAll('.link').data(linkData).enter();
+        this.links
+            .append('line')
+            .attr('class', 'link')
+            .attr('marker-end', 'url(#arrowhead)');
 
-        // // Global events
-        // var dragHandler = d3.drag<SVGElement, SimulationNodeDatum>();
+        // Global events
+        var dragHandler = d3.drag<SVGElement, SimulationNodeDatum>();
 
-        // dragHandler
-        //     .on('start', (event: any, d: SimulationNodeDatum) => {
-        //         if (!event.active) simulation.alphaTarget(0.3).restart();
-        //         d.fx = d.x;
-        //         d.fy = d.y;
-        //     })
-        //     .on('drag', (event: any, d: SimulationNodeDatum) => {
-        //         d.fx = event.x;
-        //         d.fy = event.y;
-        //     })
-        //     .on('end', (event: any, d: SimulationNodeDatum) => {
-        //         if (!event.active) simulation.alphaTarget(0);
-        //         d.fx = null;
-        //         d.fy = null;
-        //     });
+        dragHandler
+            .on('start', (event: any, d: SimulationNodeDatum) => {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            })
+            .on('drag', (event: any, d: SimulationNodeDatum) => {
+                d.fx = event.x;
+                d.fy = event.y;
+            })
+            .on('end', (event: any, d: SimulationNodeDatum) => {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            });
 
-        // dragHandler(node);
+        // dragHandler(this.nodes);
 
-        // var zoomHandler = d3
-        //     .zoom()
-        //     .on('zoom', (event) => g.attr('transform', event.transform))
-        //     .scaleExtent([0.5, 7]);
-        // zoomHandler(this.svg);
+        var zoomHandler = d3
+            .zoom()
+            .on('zoom', (event) =>
+                this.group.attr('transform', event.transform)
+            )
+            .scaleExtent([0.5, 7]);
 
-        // // Initialise simulation
-        // simulation.on('tick', () => {
-        //     node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
+        // this.svg.call(zoomHandler);
 
-        //     link.attr('x1', (d: any) => d.source.x)
-        //         .attr('y1', (d: any) => d.source.y)
-        //         .attr('x2', (d: any) => d.target.x)
-        //         .attr('y2', (d: any) => d.target.y);
-        // });
+        // Initialise simulation
+        simulation.on('tick', () => {
+            this.nodes.attr(
+                'transform',
+                (d: any) => `translate(${d.x}, ${d.y})`
+            );
 
-        node.exit().remove();
+            this.links
+                .attr('x1', (d: any) => d.source.x)
+                .attr('y1', (d: any) => d.source.y)
+                .attr('x2', (d: any) => d.target.x)
+                .attr('y2', (d: any) => d.target.y);
+        });
     }
 
-    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitPrerequisiteLink> {
+    findNodesRecursively(
+        units: Array<UnitPrerequisite>
+    ): Array<UnitPrerequisiteLink> {
         // Find all child nodes from 1-depth list of (node, child) pairs
         // (where child nodes may reference other top-level nodes)
 
@@ -301,36 +311,34 @@ export class Canvas {
 
             unit.prerequisites.forEach((prereq, index2) => {
                 // Disjunction
-                if (typeof prereq[index2] === 'object') {
+                if (typeof prereq === 'object') {
                     // Conjunction
-                    (prereq[index2] as unknown as Array<string>).forEach(
-                        (conjunction) => {
-                            nodes.indexOf({
-                                id: unit.id,
-                                code: conjunction,
-                                parent: index,
-                                disjunctionGroup: index2
-                            }) === -1
-                                ? nodes.push({
-                                      id: unit.id,
-                                      code: conjunction,
-                                      parent: index,
-                                      disjunctionGroup: index2
-                                  })
-                                : {};
-                        }
-                    );
-                } else if (typeof prereq[index2] === 'string') {
+                    prereq.forEach((conjunction) => {
+                        nodes.indexOf({
+                            id: unit.id,
+                            code: conjunction,
+                            parent: index,
+                            disjunctionGroup: index2
+                        }) === -1
+                            ? nodes.push({
+                                  id: unit.id,
+                                  code: conjunction,
+                                  parent: index,
+                                  disjunctionGroup: index2
+                              })
+                            : {};
+                    });
+                } else if (typeof prereq === 'string') {
                     // String literal
                     nodes.indexOf({
                         id: unit.id,
-                        code: prereq[index2],
+                        code: prereq,
                         parent: index,
                         disjunctionGroup: index2
                     }) === -1
                         ? nodes.push({
                               id: unit.id,
-                              code: prereq[index2],
+                              code: prereq,
                               parent: index,
                               disjunctionGroup: index2
                           })
@@ -353,7 +361,7 @@ export class Canvas {
 
         unitLinks.forEach((unitLink) => {
             networkNodes.map((e) => e.code).indexOf(unitLink.code) === -1
-                ? networkNodes.push({ id: unitLink.id, code: unitLink.code })
+                ? networkNodes.push({ index: unitLink.id, code: unitLink.code })
                 : {};
             if (unitLink.parent != currentHeadIndex) {
                 // Head node
@@ -362,7 +370,7 @@ export class Canvas {
             } else {
                 // Children of head node
                 networkLinks.push({
-                    id: unitLink.id,
+                    index: unitLink.id,
                     source: currentHead,
                     target: unitLink.code,
                     group: unitLink.disjunctionGroup

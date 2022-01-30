@@ -1,5 +1,5 @@
 type NetworkLink = {
-    id: number;
+    index: number;
     source: string;
     target: string;
     group: number;

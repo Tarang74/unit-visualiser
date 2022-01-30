@@ -1,5 +1,5 @@
 type NetworkNode = {
-    id: number;
+    index: number;
     code: string;
     group?: number;
 };

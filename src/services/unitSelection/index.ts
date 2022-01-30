@@ -23,7 +23,7 @@ export interface UnitOptions {
     addUnitsToSelection(n: number): void;
     removeUnitsFromSelection(unit: number): void;
 
-    getUnitPrerequisites(unitIndices: Array<number>): Array<UnitPrerequisite>;
+    getUnitPrerequisites(unitIndices: Set<number>): Array<UnitPrerequisite>;
     findPrerequisitesRecursively(
         unitIndices: Array<number>,
         data: Array<Array<number | Array<number>>>
@@ -145,13 +145,11 @@ export class UnitOptions {
         this.selectedUnits.splice(this.selectedUnits.indexOf(n));
     }
 
-    getUnitPrerequisites(unitIndices: Array<number>): Array<UnitPrerequisite> {
-        let recursiveIndices = this.findPrerequisitesRecursively(unitIndices);
-
+    getUnitPrerequisites(unitIndices: Set<number>): Array<UnitPrerequisite> {
         // Use indices to find nodes (and children)
         var recursiveUnits: Array<UnitPrerequisite> = [];
 
-        recursiveIndices.forEach((indexValue) => {
+        unitIndices.forEach((indexValue) => {
             recursiveUnits.push({
                 id: indexValue,
                 code: UNIT_CODES[indexValue],
