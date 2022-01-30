@@ -15,15 +15,18 @@ export interface UnitOptions {
     ul: HTMLElement;
     updateOptions(s: string): Promise<Boolean>;
     checkForScroll(): void;
+
     clearOptions(): void;
     openOptions(): void;
     closeOptions(): void;
-    addUnitsToSelection(s: number): void;
-    removeUnitFromSelection(unit: number): void;
-    getUnitPrerequisites(unitIndices: Array<number>): Array<Unit>;
-    findUnitsRecursively(
+
+    addUnitsToSelection(n: number): void;
+    removeUnitsFromSelection(unit: number): void;
+
+    getUnitPrerequisites(unitIndices: Array<number>): Array<UnitPrerequisite>;
+    findPrerequisitesRecursively(
         unitIndices: Array<number>,
-        data?: Array<Array<number | Array<number>>>
+        data: Array<Array<number | Array<number>>>
     ): Set<number>;
 }
 
@@ -93,9 +96,7 @@ export class UnitOptions {
                         element.addEventListener(
                             'click',
                             () => {
-                                this.addUnitsToSelection(
-                                    element.id as unknown as number
-                                );
+                                this.addUnitsToSelection(parseInt(element.id));
                                 resolve(true);
                             },
                             true
@@ -135,67 +136,84 @@ export class UnitOptions {
         this.ul.style.display = 'none';
     }
 
-    addUnitsToSelection(s: number) {
-        this.selectedUnits.push(s);
+    addUnitsToSelection(n: number) {
+        this.selectedUnits.push(n);
         this.closeOptions();
     }
 
-    removeUnitFromSelection(unit: number) {
-        this.selectedUnits.splice(this.selectedUnits.indexOf(unit));
+    removeUnitsFromSelection(n: number) {
+        this.selectedUnits.splice(this.selectedUnits.indexOf(n));
     }
 
-    getUnitPrerequisites(unitIndices: Array<number>): Array<Unit> {
-        let recursiveIndices = this.findUnitsRecursively(unitIndices);
+    getUnitPrerequisites(unitIndices: Array<number>): Array<UnitPrerequisite> {
+        let recursiveIndices = this.findPrerequisitesRecursively(unitIndices);
 
         // Use indices to find nodes (and children)
-        var recursiveUnits: Array<Unit> = [];
+        var recursiveUnits: Array<UnitPrerequisite> = [];
 
-        for (let i = 0; i < unitIndices.length; i++) {
-            recursiveUnits.push([
-                UNIT_CODES[unitIndices[i]],
-                UNIT_PREREQUISITES[unitIndices[i]]
-            ]);
-        }
+        recursiveIndices.forEach((value) => {
+            recursiveUnits.push({
+                id: value,
+                code: UNIT_CODES[value],
+                prerequisites: UNIT_PREREQUISITES[value]
+            });
+        });
+
         return recursiveUnits;
     }
 
-    findUnitsRecursively(
+    findPrerequisitesRecursively(
         unitIndices: Array<number>,
-        data?: Array<Array<number | Array<number>>>
+        data: Array<Array<number | Array<number>>> = UNIT_PREREQUISITE_INDICES
     ): Set<number> {
-        if (!data) data = UNIT_PREREQUISITE_INDICES;
         let output: Set<number> = new Set<number>([]);
+
         unitIndices.forEach((value) => {
             output.add(value);
         });
 
-        for (let i = 0; i < unitIndices.length; i++) {
-            data[unitIndices[i]].forEach((value) => {
-                if (typeof value === 'number') {
-                    output.add(value);
+        unitIndices.forEach((selection) => {
+            data[selection].forEach((prereq) => {
+                if (typeof prereq === 'number') {
+                    if (!output.has(prereq)) {
+                        let recursive = this.findPrerequisitesRecursively(
+                            [prereq],
+                            data
+                        );
+                        recursive.forEach((value2) => {
+                            output.add(value2);
+                        });
+                    }
                 } else {
-                    value.forEach((value1) => {
-                        output.add(value1);
+                    prereq.forEach((value1) => {
+                        if (!output.has(value1)) {
+                            let recursive = this.findPrerequisitesRecursively(
+                                [value1],
+                                data
+                            );
+                            recursive.forEach((value2) => {
+                                output.add(value2);
+                            });
+                        }
                     });
                 }
             });
-        }
+        });
 
         return output;
     }
 }
 
-export function getUnitData(
-    indices: Array<number>
-): Array<[string, string, number]> {
-    var output: Array<[string, string, number]> = [];
+export function getUnitInfo(indices: Set<number>): Array<UnitInfo> {
+    var output: Array<UnitInfo> = [];
 
-    indices.forEach((value) => {
-        output.push([
-            UNIT_CODES[value],
-            UNIT_NAMES[value],
-            UNIT_CREDIT_POINTS[value]
-        ]);
+    indices.forEach((indexValue) => {
+        output.push({
+            id: indexValue,
+            code: UNIT_CODES[indexValue],
+            name: UNIT_NAMES[indexValue],
+            creditPoints: UNIT_CREDIT_POINTS[indexValue]
+        });
     });
 
     return output;

@@ -1,9 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { getUnitData, UnitOptions } from '@services/unitSelection';
+import { getUnitInfo, UnitOptions } from '@services/unitSelection';
 import * as d3 from 'd3';
-import { SimulationNodeDatum } from 'd3';
 
 import classnames, {
     alignItems,
@@ -22,15 +21,30 @@ import './styles.scss';
 
 export interface Canvas {
     svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+    group: d3.Selection<SVGGElement, unknown, null, undefined>;
+    nodes: d3.Selection<SVGGElement, unknown, null, undefined>;
+    links: d3.Selection<SVGGElement, unknown, null, undefined>;
+
     width: number;
     height: number;
     displayedUnits: Array<number>;
     selectElement: HTMLInputElement;
 
-    updateNodes(newNodes: Array<number>): void;
-    removeChildNodes(parent: HTMLElement): void;
-    updateCanvas(json: NetworkNode): void;
-    findNodesRecursively(l: Unit[]): Array<[string, number, number]>;
+    updateNodes(newNodes: Set<number>): void;
+
+    removeChildrenFromElement(parent: HTMLElement): void;
+
+    updateCanvas(
+        nodeData: Array<NetworkNode>,
+        linkData: Array<NetworkLink>
+    ): void;
+
+    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitLink>;
+    formatNode(
+        unitLinks: Array<UnitLink>
+    ): [Array<NetworkNode>, Array<NetworkLink>];
+
+    updateVariables(container: HTMLElement): void;
 }
 
 export class Canvas {
@@ -60,6 +74,15 @@ export class Canvas {
             .append('svg:path')
             .attr('d', 'M0,-5L10,0L0,5');
 
+        // Main group
+        this.group = this.svg.append('g').attr('class', 'zoom-group');
+        this.nodes = this.group.append('g').attr('class', 'nodes');
+
+        this.updateVariables(container);
+        window.onresize = () => {
+            this.updateVariables(container);
+        };
+
         let selectElement = document.getElementById('select-units');
         if (selectElement)
             this.selectElement = selectElement as HTMLInputElement;
@@ -76,17 +99,25 @@ export class Canvas {
             unitSelector.updateOptions(this.selectElement.value).then(
                 (resolveValue) => {
                     if (resolveValue) {
-                        var requiredNodes = unitSelector.getUnitPrerequisites(
-                            unitSelector.selectedUnits
+                        var allRequiredNodes =
+                            unitSelector.getUnitPrerequisites(
+                                unitSelector.selectedUnits
+                            );
+
+                        var [nodeData, linkData] = self.formatNode(
+                            self.findNodesRecursively(allRequiredNodes)
                         );
 
-                        var output = self.formatNode(
-                            self.findNodesRecursively(requiredNodes)
+                        self.updateNodes(
+                            unitSelector.findPrerequisitesRecursively(
+                                unitSelector.selectedUnits
+                            )
                         );
 
-                        console.log(output);
-                        self.updateNodes(unitSelector.selectedUnits);
-                        self.updateCanvas(output);
+                        console.log(nodeData);
+                        console.log(linkData);
+
+                        self.updateCanvas(nodeData, linkData);
                     }
                 },
                 (rejectValue) => {
@@ -100,22 +131,24 @@ export class Canvas {
         });
     }
 
-    updateNodes(newNodes: Array<number>): void {
+    updateNodes(newNodes: Set<number>): void {
         let container = document.getElementById('displayed-units-container');
         if (!container) return;
 
-        if (!newNodes) return this.removeChildNodes(container);
-        let nodeData = getUnitData(newNodes);
+        if (!newNodes) return this.removeChildrenFromElement(container);
+        let nodeData = getUnitInfo(newNodes);
+
+        console.log(nodeData);
 
         const Nodes = () => (
             <>
                 {nodeData.map((value) => (
-                    <li key={value[0]} id={value[0]}>
+                    <li key={value.id} id={value.name}>
                         <div>
-                            <a>{value[0]}</a>
-                            <a>{value[1]}</a>
+                            <a>{value.name}</a>
+                            <a>{value.code}</a>
                         </div>
-                        <div>{value[2]}</div>
+                        <div>{value.creditPoints}</div>
                     </li>
                 ))}
             </>
@@ -143,49 +176,43 @@ export class Canvas {
                         <Nodes />
                     </ul>
                 </div>
-                ,
             </React.StrictMode>,
             container
         );
     }
 
-    removeChildNodes(parent: HTMLElement): void {
+    removeChildrenFromElement(parent: HTMLElement): void {
         while (parent.firstChild) {
             parent.removeChild(parent.firstChild);
         }
     }
 
-    updateCanvas(data: NetworkNode) {
-        // Simulation object
-        var simulation = d3.forceSimulation(
-            data.nodes as d3.SimulationNodeDatum[]
-        );
+    updateCanvas(
+        nodeData: Array<NetworkNode>,
+        linkData: Array<NetworkLink>
+    ): void {
+        // // Simulation object
+        // var simulation = d3.forceSimulation(
+        //     data.nodes as d3.SimulationNodeDatum[]
+        // );
 
-        // Forces
-        var chargeForce = d3.forceManyBody().strength(-400);
-        var centerForce = d3.forceCenter(this.width / 10, this.height / 10);
-        var linkForce = d3.forceLink(data.links).id((d: any) => d.name);
+        // // Forces
+        // var chargeForce = d3.forceManyBody().strength(-400);
+        // var centerForce = d3.forceCenter(this.width / 10, this.height / 10);
+        // var linkForce = d3.forceLink(data.links).id((d: any) => d.name);
 
-        simulation
-            .force('charge_force', chargeForce)
-            .force('center_force', centerForce)
-            .force('links', linkForce);
-
-        // Main group
-        var g = this.svg.append('g').attr('class', 'zoom-group');
+        // simulation
+        //     .force('charge_force', chargeForce)
+        //     .force('center_force', centerForce)
+        //     .force('links', linkForce);
 
         // Node group
-        var node = g
-            .append('g')
-            .attr('class', 'nodes')
-            .selectAll('.nodes')
-            .data(data.nodes)
-            .enter();
+        var node = this.nodes.selectAll('.nodes').data(nodeData).enter();
 
-        node.append('g').attr(
-            'transform',
-            (d: any) => `translate(${d.x}, ${d.y})`
-        );
+        // node.append('g').attr(
+        //     'transform',
+        //     (d: any) => `translate(${d.x}, ${d.y})`
+        // );
 
         // Node rect
         node.append('rect')
@@ -195,7 +222,8 @@ export class Canvas {
 
         // Node text
         node.append('text')
-            .text((d) => d.name)
+            // .merge(node)
+            .text((d) => d.code)
             .style('font-size', '12px')
             .attr('dy', '1em');
 
@@ -205,115 +233,153 @@ export class Canvas {
             // (d) => this.childNodes[1].getComputedTextLength() + 20
         );
 
-        // Link line
-        var link = g
-            .append('g')
-            .attr('class', 'link')
-            .selectAll('.links')
-            .data(data.links)
-            .enter();
-        link.append('line')
-            .attr('class', 'link')
-            .attr('marker-end', 'url(#arrowhead)');
+        // // Link line
+        // var link = g
+        //     .append('g')
+        //     .attr('class', 'link')
+        //     .selectAll('.links')
+        //     .data(data.links)
+        //     .enter();
+        // link.append('line')
+        //     .attr('class', 'link')
+        //     .attr('marker-end', 'url(#arrowhead)');
 
-        // Global events
-        var dragHandler = d3.drag<SVGElement, SimulationNodeDatum>();
+        // // Global events
+        // var dragHandler = d3.drag<SVGElement, SimulationNodeDatum>();
 
-        dragHandler
-            .on('start', (event: any, d: SimulationNodeDatum) => {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            })
-            .on('drag', (event: any, d: SimulationNodeDatum) => {
-                d.fx = event.x;
-                d.fy = event.y;
-            })
-            .on('end', (event: any, d: SimulationNodeDatum) => {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-            });
+        // dragHandler
+        //     .on('start', (event: any, d: SimulationNodeDatum) => {
+        //         if (!event.active) simulation.alphaTarget(0.3).restart();
+        //         d.fx = d.x;
+        //         d.fy = d.y;
+        //     })
+        //     .on('drag', (event: any, d: SimulationNodeDatum) => {
+        //         d.fx = event.x;
+        //         d.fy = event.y;
+        //     })
+        //     .on('end', (event: any, d: SimulationNodeDatum) => {
+        //         if (!event.active) simulation.alphaTarget(0);
+        //         d.fx = null;
+        //         d.fy = null;
+        //     });
 
-        dragHandler(node);
+        // dragHandler(node);
 
-        var zoomHandler = d3
-            .zoom()
-            .on('zoom', (event) => g.attr('transform', event.transform))
-            .scaleExtent([0.5, 7]);
-        zoomHandler(this.svg);
+        // var zoomHandler = d3
+        //     .zoom()
+        //     .on('zoom', (event) => g.attr('transform', event.transform))
+        //     .scaleExtent([0.5, 7]);
+        // zoomHandler(this.svg);
 
-        // Initialise simulation
-        simulation.on('tick', () => {
-            node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
+        // // Initialise simulation
+        // simulation.on('tick', () => {
+        //     node.attr('transform', (d: any) => `translate(${d.x}, ${d.y})`);
 
-            link.attr('x1', (d: any) => d.source.x)
-                .attr('y1', (d: any) => d.source.y)
-                .attr('x2', (d: any) => d.target.x)
-                .attr('y2', (d: any) => d.target.y);
-        });
+        //     link.attr('x1', (d: any) => d.source.x)
+        //         .attr('y1', (d: any) => d.source.y)
+        //         .attr('x2', (d: any) => d.target.x)
+        //         .attr('y2', (d: any) => d.target.y);
+        // });
+
+        node.exit().remove();
     }
 
-    findNodesRecursively(l: Unit[]): Array<[string, number, number]> {
+    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitLink> {
         // Find all child nodes from 1-depth list of (node, child) pairs
         // (where child nodes may reference other top-level nodes)
 
-        var nodes: Array<[string, number, number]> = [];
+        var nodes: Array<UnitLink> = [];
 
-        for (let i = 0; i < l.length; i++) {
+        units.forEach((unit, index) => {
             /* Append root node */
-            nodes.push([l[i][0], i, -1]);
+            nodes.push({
+                id: unit.id,
+                code: unit.code,
+                parent: index,
+                disjunctionGroup: -1
+            });
 
-            let lenJ: number = l[i][1].length;
-            for (let j = 0; j < lenJ; j++) {
+            unit.prerequisites.forEach((prereq, index2) => {
                 // Disjunction
                 let newNode: string;
-                if (typeof l[i][1][j] == 'object') {
+                if (typeof prereq[index2] == 'object') {
                     // Conjunction
-                    let lenK: number = l[i][1][j].length;
+                    let lenK: number = prereq[index2].length;
                     for (let k = 0; k < lenK; k++) {
-                        newNode = l[i][1][j][k];
-                        nodes.indexOf([newNode, i, j]) === -1
-                            ? nodes.push([newNode, i, j])
+                        newNode = prereq[index2][k];
+                        nodes.indexOf({
+                            id: unit.id,
+                            code: newNode,
+                            parent: index,
+                            disjunctionGroup: index2
+                        }) === -1
+                            ? nodes.push({
+                                  id: unit.id,
+                                  code: newNode,
+                                  parent: index,
+                                  disjunctionGroup: index2
+                              })
                             : {};
                     }
-                } else if (typeof l[i][1][j] == 'string') {
+                } else if (typeof prereq[index2] == 'string') {
                     // String literal
-                    newNode = l[i][1][j] as string;
-                    nodes.indexOf([newNode, i, j]) === -1
-                        ? nodes.push([newNode, i, j])
+                    newNode = prereq[index2];
+                    nodes.indexOf({
+                        id: unit.id,
+                        code: newNode,
+                        parent: index,
+                        disjunctionGroup: index2
+                    }) === -1
+                        ? nodes.push({
+                              id: unit.id,
+                              code: newNode,
+                              parent: index,
+                              disjunctionGroup: index2
+                          })
                         : {};
                 }
-            }
-        }
+            });
+        });
 
         return nodes;
     }
 
-    formatNode(l: Array<[string, number, number]>): NetworkNode {
-        var network: NetworkNode = { nodes: [], links: [] };
+    formatNode(
+        unitLinks: Array<UnitLink>
+    ): [Array<NetworkNode>, Array<NetworkLink>] {
+        var networkNodes: Array<NetworkNode> = [];
+        var networkLinks: Array<NetworkLink> = [];
+
         var currentHeadIndex = -1;
         var currentHead = '';
 
-        l.forEach((element) => {
-            network.nodes.map((e) => e.name).indexOf(element[0]) === -1
-                ? network.nodes.push({ name: element[0] })
+        unitLinks.forEach((unitLink) => {
+            networkNodes.map((e) => e.code).indexOf(unitLink.code) === -1
+                ? networkNodes.push({ id: unitLink.id, code: unitLink.code })
                 : {};
-            if (element[1] != currentHeadIndex) {
+            if (unitLink.parent != currentHeadIndex) {
                 // Head node
-                currentHead = element[0];
+                currentHead = unitLink.code;
                 currentHeadIndex++;
             } else {
                 // Children of head node
-                network.links.push({
+                networkLinks.push({
+                    id: unitLink.id,
                     source: currentHead,
-                    target: element[0],
-                    group: element[2]
+                    target: unitLink.code,
+                    group: unitLink.disjunctionGroup
                 });
             }
         });
 
-        return network;
+        return [networkNodes, networkLinks];
+    }
+
+    updateVariables(container: HTMLElement): void {
+        this.width = container.clientWidth;
+        this.height = container.clientHeight;
+
+        this.svg.attr('height', this.height).attr('width', this.width);
     }
 }
 
