@@ -1,4 +1,4 @@
-type UnitLink = {
+type UnitPrerequisiteLink = {
     id: number;
     code: string;
     parent: number;

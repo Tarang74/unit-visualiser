@@ -151,11 +151,11 @@ export class UnitOptions {
         // Use indices to find nodes (and children)
         var recursiveUnits: Array<UnitPrerequisite> = [];
 
-        recursiveIndices.forEach((value) => {
+        recursiveIndices.forEach((indexValue) => {
             recursiveUnits.push({
-                id: value,
-                code: UNIT_CODES[value],
-                prerequisites: UNIT_PREREQUISITES[value]
+                id: indexValue,
+                code: UNIT_CODES[indexValue],
+                prerequisites: UNIT_PREREQUISITES[indexValue]
             });
         });
 

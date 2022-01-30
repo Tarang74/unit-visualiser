@@ -39,9 +39,9 @@ export interface Canvas {
         linkData: Array<NetworkLink>
     ): void;
 
-    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitLink>;
+    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitPrerequisiteLink>;
     formatNode(
-        unitLinks: Array<UnitLink>
+        unitLinks: Array<UnitPrerequisiteLink>
     ): [Array<NetworkNode>, Array<NetworkLink>];
 
     updateVariables(container: HTMLElement): void;
@@ -284,11 +284,11 @@ export class Canvas {
         node.exit().remove();
     }
 
-    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitLink> {
+    findNodesRecursively(units: Array<UnitPrerequisite>): Array<UnitPrerequisiteLink> {
         // Find all child nodes from 1-depth list of (node, child) pairs
         // (where child nodes may reference other top-level nodes)
 
-        var nodes: Array<UnitLink> = [];
+        var nodes: Array<UnitPrerequisiteLink> = [];
 
         units.forEach((unit, index) => {
             /* Append root node */
@@ -301,38 +301,36 @@ export class Canvas {
 
             unit.prerequisites.forEach((prereq, index2) => {
                 // Disjunction
-                let newNode: string;
-                if (typeof prereq[index2] == 'object') {
+                if (typeof prereq[index2] === 'object') {
                     // Conjunction
-                    let lenK: number = prereq[index2].length;
-                    for (let k = 0; k < lenK; k++) {
-                        newNode = prereq[index2][k];
-                        nodes.indexOf({
-                            id: unit.id,
-                            code: newNode,
-                            parent: index,
-                            disjunctionGroup: index2
-                        }) === -1
-                            ? nodes.push({
-                                  id: unit.id,
-                                  code: newNode,
-                                  parent: index,
-                                  disjunctionGroup: index2
-                              })
-                            : {};
-                    }
-                } else if (typeof prereq[index2] == 'string') {
+                    (prereq[index2] as unknown as Array<string>).forEach(
+                        (conjunction) => {
+                            nodes.indexOf({
+                                id: unit.id,
+                                code: conjunction,
+                                parent: index,
+                                disjunctionGroup: index2
+                            }) === -1
+                                ? nodes.push({
+                                      id: unit.id,
+                                      code: conjunction,
+                                      parent: index,
+                                      disjunctionGroup: index2
+                                  })
+                                : {};
+                        }
+                    );
+                } else if (typeof prereq[index2] === 'string') {
                     // String literal
-                    newNode = prereq[index2];
                     nodes.indexOf({
                         id: unit.id,
-                        code: newNode,
+                        code: prereq[index2],
                         parent: index,
                         disjunctionGroup: index2
                     }) === -1
                         ? nodes.push({
                               id: unit.id,
-                              code: newNode,
+                              code: prereq[index2],
                               parent: index,
                               disjunctionGroup: index2
                           })
@@ -345,7 +343,7 @@ export class Canvas {
     }
 
     formatNode(
-        unitLinks: Array<UnitLink>
+        unitLinks: Array<UnitPrerequisiteLink>
     ): [Array<NetworkNode>, Array<NetworkLink>] {
         var networkNodes: Array<NetworkNode> = [];
         var networkLinks: Array<NetworkLink> = [];
