@@ -1,4 +1,7 @@
-export default function setEquals(setA: Set<number>, setB: Set<number>): boolean {
+export default function setEquals(
+    setA: Set<number>,
+    setB: Set<number>
+): boolean {
     if (setA.size !== setB.size) {
         return false;
     }
@@ -8,6 +11,6 @@ export default function setEquals(setA: Set<number>, setB: Set<number>): boolean
             return false;
         }
     }
-    
+
     return true;
-};
+}
