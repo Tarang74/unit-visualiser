@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "module": "ES2015",
+        "module": "ESNext",
         "target": "ES2016"
     },
     "extends": "./tsconfig.common.json"

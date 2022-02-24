@@ -177,12 +177,14 @@ export class Canvas {
                                     ? value.name
                                     : 'Unit unavailable'}
                             </a>
-                            <a>{value.code}</a>
                         </div>
                         <div>
-                            {value.creditPoints !== 0
-                                ? value.creditPoints
-                                : 'N/A'}
+                            <a>{value.code}</a>
+                            <a>
+                                {value.creditPoints !== 0
+                                    ? `CP:${value.creditPoints}`
+                                    : ''}
+                            </a>
                         </div>
                     </li>
                 ))}
@@ -226,9 +228,6 @@ export class Canvas {
         nodeData: Array<NetworkNode>,
         linkData: Array<NetworkLink>
     ): SVGSVGElement | null {
-        console.log(nodeData);
-        console.log(linkData);
-
         function dragStarted(
             event: D3DragEvent<SVGGElement, NetworkNode, unknown>,
             d: NetworkNode
