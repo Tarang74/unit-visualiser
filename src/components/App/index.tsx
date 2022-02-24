@@ -100,7 +100,7 @@ export class Canvas {
             .attr('refY', 0)
             .attr('markerWidth', 12)
             .attr('markerHeight', 6)
-            .attr('orient', 'auto')
+            .attr('orient', 'auto-start-reverse')
             .append('path')
             .attr('fill', this.linkColor)
             .attr('d', 'M0,-5L10,0L0,5');
@@ -242,7 +242,6 @@ export class Canvas {
             event: D3DragEvent<SVGGElement, NetworkNode, unknown>,
             d: NetworkNode
         ) {
-            console.log('dragging');
             d.fx = event.x;
             d.fy = event.y;
         }
@@ -271,26 +270,35 @@ export class Canvas {
         const link = this.links
             .selectAll('line')
             .data(linkData)
-            .join('line')
-            .attr('class', 'link')
-            .attr('stroke', (d) => this.linkColor(d.group))
-            .attr('marker-end', (d) => `url(#arrow-${d.group})`);
+            .join(
+                (enter) =>
+                    enter
+                        .append('line')
+                        .attr('class', 'link')
+                        .attr('stroke', (d) => this.linkColor(d.group))
+                        .attr('marker-start', (d) => `url(#arrow-${d.group})`),
+                (update) => update.transition().duration(500)
+            );
 
         const node = this.nodes
             .selectAll<SVGGElement, SVGGElement>('.node')
             .data(nodeData)
-            .join('g')
-            .attr('class', 'node')
-            .call(
-                d3
-                    .drag<SVGGElement, NetworkNode>()
-                    .on('start', dragStarted)
-                    .on('drag', dragged)
-                    .on('end', dragEnded)
+            .join(
+                (enter) =>
+                    enter
+                        .append('g')
+                        .attr('class', 'node')
+                        .call(
+                            d3
+                                .drag<SVGGElement, NetworkNode>()
+                                .on('start', dragStarted)
+                                .on('drag', dragged)
+                                .on('end', dragEnded)
+                        ),
+                (update) => update.transition().duration(500)
             );
 
-        node.append('circle').attr('fill', (d) => this.nodeColor(d.group));
-
+        node.append('rect').attr('fill', (d) => this.nodeColor(d.group));
         node.append('text').text((d) => d.id);
 
         let lastK = 0;
@@ -309,7 +317,6 @@ export class Canvas {
         });
 
         const zoomed = (event: D3ZoomEvent<SVGSVGElement, NetworkNode>) => {
-            console.log(event);
             if (event.transform.k > 2 && lastK != event.transform.k) {
                 lastK = event.transform.k;
             }

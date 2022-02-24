@@ -2,30 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+    font-family: 'UniSans';
+    font-weight: 600;
+    src: url('@fonts/Uni Sans/UniSans-Trial-SemiBold.woff2');
+}
+
+@font-face {
+    font-family: 'UniSans';
+    font-weight: 400;
+    src: url('@fonts/Uni Sans/UniSans-Trial-Normal.woff2');
+}
+
+#app {
+    svg {
+        background-color: rgba($color: #242424, $alpha: 1);
+    }
+}
+
 .node {
     circle {
         stroke: #fff;
         stroke-width: 3;
         r: 20px;
-        box-shadow: 0px 0px 30px rgba($color: #2b2b2b, $alpha: 0.6);
+        box-shadow: 0px 0px 30px rgba($color: #2b2b2b, $alpha: 0.8);
     }
     
+    rect {
+        $width: 6rem;
+        $height: 2.5rem;
+
+        width: $width;
+        height: $height;
+        rx: 2px;
+
+        stroke: #fff;
+        stroke-width: 3;
+        box-shadow: 0px 0px 30px rgba($color: #2b2b2b, $alpha: 0.8);
+
+        transform: translate(-$width / 2, -$height / 2);
+    }
+
     text {
+        font-family: 'UniSans';
+        font-weight: 600;
         font-size: larger;
+        fill: white;
+        text-anchor: middle;
+        dominant-baseline: middle;
+        cursor: pointer;
     }
 }
 
 .link {
     stroke-width: 3;
+    cursor: default;
 }
 
 #displayed-units {
     li {
         div:first-of-type {
             a:first-of-type {
+                font-family: 'UniSans';
+                font-weight: 400;
                 @apply text-lg block;
             }
+            
             a:nth-of-type(2) {
+                font-family: 'UniSans';
+                font-weight: 600;
                 @apply font-bold;
             }
         }
