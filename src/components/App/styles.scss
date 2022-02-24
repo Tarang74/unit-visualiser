@@ -4,40 +4,30 @@
 
 .node {
     stroke: #fff;
-    stroke-width: 1.5px;
-    cursor: move;
-}
-
-.group {
-    stroke: #fff;
-    stroke-width: 1.5px;
-    cursor: default;
-    opacity: 0.7;
+    stroke-width: 0px;
 }
 
 .link {
-    stroke: #7a4e4e;
-    stroke-width: 3px;
-    stroke-opacity: 1;
+    stroke: #999;
+    stroke-opacity: 0.4;
+    stroke-width: 2;
 }
 
-.arrowhead {
-    fill: #999;
-    stroke: none;
-}
 
-.label {
-    fill: white;
-    font-family: Verdana;
-    font-size: 25px;
-    text-anchor: middle;
-    /* cursor: move; */
-}
+#displayed-units {
+    li {
+        div:first-of-type {
+            a:first-of-type {
+                @apply text-lg block 
+            }
+            a:nth-of-type(2) {
+                @apply font-bold 
+            }
+        }
+        div:nth-of-type(2) {
+            @apply absolute bottom-0 right-0 m-2 p-1 bg-gray-300 w-8 h-8 rounded-md text-slate-100 font-mono flex content-center justify-center select-disabled
+        }
 
-.label_alias {
-    display: none;
-}
-
-.label::hover ~ .label_alias {
-    display: block;
+        @apply relative bg-slate-100 border-[1px] p-3
+    }
 }

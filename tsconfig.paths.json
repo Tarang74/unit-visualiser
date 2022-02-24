@@ -4,6 +4,7 @@
             "@assets/*": ["./src/assets/*"],
             "@components/*": ["./src/components/*"],
             "@functions/*": ["./src/functions/*"],
+            "@interfaces/*": ["./src/interfaces/*"],
             "@services/*": ["./src/services/*"],
             "@testing/*": ["./src/testing/*"],
             "@types/*": ["./src/types/*"]

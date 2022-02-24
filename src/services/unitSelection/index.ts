@@ -13,7 +13,7 @@ import {
 export interface UnitOptions {
     selectedUnits: Array<number>;
     ul: HTMLElement;
-    updateOptions(s: string): Promise<Boolean>;
+    updateOptions(s: string): Promise<boolean>;
     checkForScroll(): void;
 
     clearOptions(): void;
@@ -36,13 +36,16 @@ export class UnitOptions {
         this.selectedUnits = [];
 
         // Options list
-        this.ul = document.getElementById('select-options')!;
+        const ul = document.getElementById('select-options');
+        if (!ul) return;
+
+        this.ul = ul;
 
         // Initialise ul
         this.closeOptions();
     }
 
-    updateOptions(s: string): Promise<Boolean> {
+    updateOptions(s: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
             this.checkForScroll();
 
@@ -50,10 +53,10 @@ export class UnitOptions {
                 this.closeOptions();
                 reject('No input provided.');
             } else {
-                var input: string = s.toUpperCase();
+                const input: string = s.toUpperCase();
 
-                let hidden: number = 0;
-                let visible: Array<number> = [];
+                let hidden = 0;
+                const visible: Array<number> = [];
 
                 this.openOptions();
 
@@ -73,15 +76,18 @@ export class UnitOptions {
                     this.closeOptions();
                     resolve(false);
                 } else {
-                    let li: Array<HTMLElement> = [];
+                    const li: Array<HTMLElement> = [];
                     visible.forEach((value, index) => {
-                        let a1: HTMLAnchorElement = document.createElement('a');
+                        const a1: HTMLAnchorElement =
+                            document.createElement('a');
                         a1.textContent = UNIT_CODES[value];
 
-                        let a2: HTMLAnchorElement = document.createElement('a');
+                        const a2: HTMLAnchorElement =
+                            document.createElement('a');
                         a2.textContent = UNIT_NAMES[value];
 
-                        let div: HTMLDivElement = document.createElement('div');
+                        const div: HTMLDivElement =
+                            document.createElement('div');
                         div.appendChild(a1);
                         div.appendChild(a2);
 
@@ -113,13 +119,17 @@ export class UnitOptions {
     }
 
     checkForScroll() {
-        let selectContainer = document.getElementById(
+        const selectContainer = document.getElementById(
             'select-units-container'
-        )!;
-        let dim = selectContainer.getBoundingClientRect();
-        let top = dim.y + dim.height;
+        );
+        if (!selectContainer) return;
 
-        this.ul.parentElement!.style.top = `${top.toString()}px`;
+        const dim = selectContainer.getBoundingClientRect();
+        const top = dim.y + dim.height;
+
+        if (!this.ul.parentElement) return;
+
+        this.ul.parentElement.style.top = `${top.toString()}px`;
     }
 
     clearOptions() {
@@ -147,12 +157,16 @@ export class UnitOptions {
 
     getUnitPrerequisites(unitIndices: Set<number>): Array<UnitPrerequisite> {
         // Use indices to find nodes (and children)
-        var recursiveUnits: Array<UnitPrerequisite> = [];
+        const recursiveUnits: Array<UnitPrerequisite> = [];
 
         unitIndices.forEach((indexValue) => {
             recursiveUnits.push({
                 id: indexValue,
                 code: UNIT_CODES[indexValue],
+                study_area:
+                    UNIT_STUDY_AREAS[indexValue] !== undefined
+                        ? UNIT_STUDY_AREAS[indexValue]
+                        : 'Other',
                 prerequisites: UNIT_PREREQUISITES[indexValue]
             });
         });
@@ -164,7 +178,7 @@ export class UnitOptions {
         unitIndices: Array<number>,
         data: Array<Array<number | Array<number>>> = UNIT_PREREQUISITE_INDICES
     ): Set<number> {
-        let output: Set<number> = new Set<number>([]);
+        const output: Set<number> = new Set<number>([]);
 
         unitIndices.forEach((value) => {
             output.add(value);
@@ -174,7 +188,7 @@ export class UnitOptions {
             data[selection].forEach((prereq) => {
                 if (typeof prereq === 'number') {
                     if (!output.has(prereq)) {
-                        let recursive = this.findPrerequisitesRecursively(
+                        const recursive = this.findPrerequisitesRecursively(
                             [prereq],
                             data
                         );
@@ -185,7 +199,7 @@ export class UnitOptions {
                 } else {
                     prereq.forEach((value1) => {
                         if (!output.has(value1)) {
-                            let recursive = this.findPrerequisitesRecursively(
+                            const recursive = this.findPrerequisitesRecursively(
                                 [value1],
                                 data
                             );
@@ -203,7 +217,7 @@ export class UnitOptions {
 }
 
 export function getUnitInfo(indices: Set<number>): Array<UnitInfo> {
-    var output: Array<UnitInfo> = [];
+    const output: Array<UnitInfo> = [];
 
     indices.forEach((indexValue) => {
         output.push({

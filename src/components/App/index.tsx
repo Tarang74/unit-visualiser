@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import { getUnitInfo, UnitOptions } from '@services/unitSelection';
+import { UNIT_STUDY_AREAS } from '@assets/data/Unit Data';
+
 import * as d3 from 'd3';
 
 import classnames, {
@@ -18,13 +20,16 @@ import classnames, {
 } from '@assets/tailwindcss-classnames';
 
 import './styles.scss';
-import { SimulationNodeDatum } from 'd3';
+import { NetworkNode, NetworkLink } from '@interfaces/index';
+import { BaseType, D3DragEvent, D3ZoomEvent } from 'd3';
 
 export interface Canvas {
-    svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
-    group: d3.Selection<SVGGElement, unknown, null, undefined>;
-    nodes: d3.Selection<SVGGElement, unknown, null, undefined>;
-    links: d3.Selection<SVGGElement, unknown, null, undefined>;
+    color: d3.ScaleOrdinal<string, string, never>;
+
+    svg: d3.Selection<SVGSVGElement, NetworkNode, HTMLElement, unknown>;
+    zoomGroup: d3.Selection<SVGGElement, NetworkNode, HTMLElement, unknown>;
+    nodes: d3.Selection<SVGGElement, NetworkNode, HTMLElement, unknown>;
+    links: d3.Selection<SVGGElement, NetworkNode, HTMLElement, unknown>;
 
     width: number;
     height: number;
@@ -38,7 +43,7 @@ export interface Canvas {
     updateCanvas(
         nodeData: Array<NetworkNode>,
         linkData: Array<NetworkLink>
-    ): void;
+    ): SVGSVGElement | null;
 
     findNodesRecursively(
         units: Array<UnitPrerequisite>
@@ -51,50 +56,55 @@ export interface Canvas {
 }
 
 export class Canvas {
-    constructor(container: HTMLElement) {
-        this.width = container.clientWidth;
-        this.height = container.clientHeight;
+    constructor(selector: string) {
+        const container = document.getElementById('app');
+        if (!container) return;
+
         this.displayedUnits = [];
 
+        const types = Array.from(new Set(UNIT_STUDY_AREAS));
+        this.color = d3.scaleOrdinal(types, d3.schemeCategory10);
+
         this.svg = d3
-            .select(container)
+            .select<SVGSVGElement, NetworkNode>(selector)
             .append('svg')
-            .attr('width', this.width)
-            .attr('height', this.height);
+            .attr('class', 'graph')
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .classed('svg-content', true);
 
         this.svg
             .append('defs')
-            .append('marker')
-            .attr('id', 'arrowhead')
-            .attr('class', 'arrowhead')
-            .attr('viewBox', [0, -5, 10, 10])
-            .attr('refX', 13)
+            .selectAll('marker')
+            .data(types)
+            .join('marker')
+            .attr('id', (d) => `arrow-${d}`)
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 38)
             .attr('refY', 0)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
             .attr('orient', 'auto')
-            .attr('markerWidth', 13)
-            .attr('markerHeight', 13)
-            .attr('x-overflow', 'visible')
-            .append('svg:path')
+            .append('path')
+            .attr('fill', this.color)
             .attr('d', 'M0,-5L10,0L0,5');
 
-        // Main group
-        this.group = this.svg.append('g').attr('class', 'zoom-group');
+        this.zoomGroup = this.svg.append('g').attr('class', 'zoom-group');
 
-        this.nodes = this.group.append('g').attr('class', 'nodes');
-        this.links = this.group.append('g').attr('class', 'links');
+        this.nodes = this.zoomGroup.append('g').attr('class', 'nodes');
+        this.links = this.zoomGroup.append('g').attr('class', 'links');
 
         this.updateVariables(container);
         window.onresize = () => {
             this.updateVariables(container);
         };
 
-        let selectElement = document.getElementById('select-units');
+        const selectElement = document.getElementById('select-units');
         if (selectElement)
             this.selectElement = selectElement as HTMLInputElement;
 
-        let unitSelector = new UnitOptions();
+        const unitSelector = new UnitOptions();
 
-        var self = this;
+        const self = this;
 
         const selection = () => {
             if (self.selectElement.value == '') {
@@ -104,24 +114,19 @@ export class Canvas {
             unitSelector.updateOptions(this.selectElement.value).then(
                 (resolveValue) => {
                     if (resolveValue) {
-                        let recursiveNodes =
+                        const recursiveNodes =
                             unitSelector.findPrerequisitesRecursively(
                                 unitSelector.selectedUnits
                             );
 
                         self.updateNodes(recursiveNodes);
 
-                        var nodePrerequisites =
+                        const nodePrerequisites =
                             unitSelector.getUnitPrerequisites(recursiveNodes);
 
-                        console.log(nodePrerequisites);
-
-                        var [nodeData, linkData] = self.formatNode(
+                        const [nodeData, linkData] = self.formatNode(
                             self.findNodesRecursively(nodePrerequisites)
                         );
-
-                        console.log(nodeData);
-                        console.log(linkData);
 
                         self.updateCanvas(nodeData, linkData);
                     }
@@ -138,23 +143,29 @@ export class Canvas {
     }
 
     updateNodes(newNodes: Set<number>): void {
-        let container = document.getElementById('displayed-units-container');
+        const container = document.getElementById('displayed-units-container');
         if (!container) return;
 
         if (!newNodes) return this.removeChildrenFromElement(container);
-        let nodeData = getUnitInfo(newNodes);
-
-        // console.log(nodeData);
+        const nodeData = getUnitInfo(newNodes);
 
         const Nodes = () => (
             <>
                 {nodeData.map((value) => (
                     <li key={value.id} id={value.name}>
                         <div>
-                            <a>{value.name}</a>
+                            <a>
+                                {value.name !== ''
+                                    ? value.name
+                                    : 'Unit unavailable'}
+                            </a>
                             <a>{value.code}</a>
                         </div>
-                        <div>{value.creditPoints}</div>
+                        <div>
+                            {value.creditPoints !== 0
+                                ? value.creditPoints
+                                : 'N/A'}
+                        </div>
                     </li>
                 ))}
             </>
@@ -174,11 +185,11 @@ export class Canvas {
                 </div>
                 <div
                     className={classnames(
-                        height('h-32'),
+                        height('h-48'),
                         overflow('overflow-y-auto')
                     )}
                 >
-                    <ul>
+                    <ul id="displayed-units">
                         <Nodes />
                     </ul>
                 </div>
@@ -196,100 +207,133 @@ export class Canvas {
     updateCanvas(
         nodeData: Array<NetworkNode>,
         linkData: Array<NetworkLink>
-    ): void {
-        // Simulation object
-        var simulation = d3.forceSimulation<NetworkNode>(nodeData);
+    ): SVGSVGElement | null {
+        console.log(nodeData);
+        console.log(linkData);
 
-        // Forces
-        var chargeForce = d3.forceManyBody().strength(-400);
-        var centerForce = d3.forceCenter(this.width / 10, this.height / 10);
-        var linkForce = d3.forceLink(linkData).id((d) => d.index!);
+        function drag() {
+            // selection: d3.Selection<
+            //     BaseType | SVGCircleElement,
+            //     NetworkNode,
+            //     SVGGElement,
+            //     NetworkNode
+            // >,
+            // simulation: d3.Simulation<NetworkNode, NetworkLink>
+            console.log(simulation);
 
-        simulation
-            .force('charge_force', chargeForce)
-            .force('center_force', centerForce)
-            .force('links', linkForce);
-
-        // Node group
-        this.nodes.selectAll('.node').data(nodeData).enter();
-
-        this.nodes
-            .append('g')
-            .attr('transform', (d) => `translate(${d.x}, ${d.y})`);
-
-        // Node rect
-        this.nodes
-            .append('rect')
-            .attr('class', 'node')
-            .attr('height', 15)
-            .style('fill', 'blue');
-
-        const textFunction = (d: NetworkNode) => d.code;
-
-        // Node text
-        this.nodes
-            .append('text')
-            // .merge(node)
-            .text(textFunction)
-            .style('font-size', '12px')
-            .attr('dy', '1em');
-
-        this.nodes.attr(
-            'width',
-            20
-            // (d) => this.childNodes[1].getComputedTextLength() + 20
-        );
-
-        // Link line
-        this.links.selectAll('.link').data(linkData).enter();
-        this.links
-            .append('line')
-            .attr('class', 'link')
-            .attr('marker-end', 'url(#arrowhead)');
-
-        // Global events
-        var dragHandler = d3.drag<SVGElement, SimulationNodeDatum>();
-
-        dragHandler
-            .on('start', (event: any, d: SimulationNodeDatum) => {
+            function dragStarted(
+                event: D3DragEvent<SVGCircleElement, NetworkNode, unknown>,
+                d: NetworkNode
+            ) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
                 d.fy = d.y;
-            })
-            .on('drag', (event: any, d: SimulationNodeDatum) => {
+            }
+
+            function dragged(
+                event: D3DragEvent<SVGCircleElement, NetworkNode, unknown>,
+                d: NetworkNode
+            ) {
                 d.fx = event.x;
                 d.fy = event.y;
-            })
-            .on('end', (event: any, d: SimulationNodeDatum) => {
+            }
+
+            function dragEnded(
+                event: D3DragEvent<SVGCircleElement, NetworkNode, unknown>,
+                d: NetworkNode
+            ) {
                 if (!event.active) simulation.alphaTarget(0);
                 d.fx = null;
                 d.fy = null;
-            });
+            }
 
-        // dragHandler(this.nodes);
+            return d3
+                .drag<SVGCircleElement, NetworkNode>()
+                .on('start', dragStarted)
+                .on('drag', dragged)
+                .on('end', dragEnded);
+        }
 
-        var zoomHandler = d3
-            .zoom()
-            .on('zoom', (event) =>
-                this.group.attr('transform', event.transform)
+        const simulation = d3
+            .forceSimulation<NetworkNode, NetworkLink>(nodeData)
+            .force(
+                'link',
+                d3.forceLink<NetworkNode, NetworkLink>(linkData).id((d) => d.id)
             )
-            .scaleExtent([0.5, 7]);
-
-        // this.svg.call(zoomHandler);
-
-        // Initialise simulation
-        simulation.on('tick', () => {
-            this.nodes.attr(
-                'transform',
-                (d: any) => `translate(${d.x}, ${d.y})`
+            .force('charge', d3.forceManyBody<NetworkNode>().strength(-300))
+            .force('center', d3.forceCenter(this.width / 2, this.height / 2))
+            .force('x', d3.forceX())
+            .force('y', d3.forceY())
+            .force(
+                'collide',
+                d3.forceCollide(() => 65)
             );
 
-            this.links
-                .attr('x1', (d: any) => d.source.x)
+        const link = this.links
+            .selectAll('line')
+            .data(linkData)
+            .join('line')
+            .attr('stroke', (d) => this.color(d.group.toString()));
+
+        const node = this.nodes
+            .selectAll('circle')
+            .data(nodeData)
+            .join('circle')
+            .attr('stroke', 'white')
+            .attr('stroke-width', 1.5)
+            .attr('r', 25)
+            .attr('fill', () => '#6baed6')
+            .call(drag);
+
+        // node.append('text')
+        //     .attr('x', 30 + 4)
+        //     .attr('y', '0.31em')
+        //     .text((d) => d.id)
+        //     .lower()
+        //     .attr('fill', 'none')
+        //     .attr('stroke', 'white')
+        //     .attr('stroke-width', 3);
+
+        let lastK = 0;
+
+        simulation.on('tick', () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            link.attr('x1', (d: any) => d.source.x)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .attr('y1', (d: any) => d.source.y)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .attr('x2', (d: any) => d.target.x)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .attr('y2', (d: any) => d.target.y);
+
+            node.attr('cx', (d) => (d.x !== undefined ? d.x : null)).attr(
+                'cy',
+                (d) => (d.y !== undefined ? d.y : null)
+            );
         });
+
+        const zoomed = (event: D3ZoomEvent<SVGSVGElement, NetworkNode>) => {
+            console.log(event);
+            if (event.transform.k > 2 && lastK != event.transform.k) {
+                lastK = event.transform.k;
+            }
+            this.zoomGroup.attr('transform', event.transform.toString());
+        };
+
+        this.svg.call(
+            d3
+                .zoom<SVGSVGElement, NetworkNode>()
+                .extent([
+                    [0, 0],
+                    [this.width, this.height]
+                ])
+                .scaleExtent([1, 80])
+                .on('zoom', zoomed)
+        );
+
+        return this.svg.node();
+
+        // node.on('dblclick', (e, d) => console.log(d));
     }
 
     findNodesRecursively(
@@ -298,13 +342,14 @@ export class Canvas {
         // Find all child nodes from 1-depth list of (node, child) pairs
         // (where child nodes may reference other top-level nodes)
 
-        var nodes: Array<UnitPrerequisiteLink> = [];
+        const nodes: Array<UnitPrerequisiteLink> = [];
 
         units.forEach((unit, index) => {
             /* Append root node */
             nodes.push({
                 id: unit.id,
                 code: unit.code,
+                study_area: unit.study_area,
                 parent: index,
                 disjunctionGroup: -1
             });
@@ -317,12 +362,14 @@ export class Canvas {
                         nodes.indexOf({
                             id: unit.id,
                             code: conjunction,
+                            study_area: unit.study_area,
                             parent: index,
                             disjunctionGroup: index2
                         }) === -1
                             ? nodes.push({
                                   id: unit.id,
                                   code: conjunction,
+                                  study_area: unit.study_area,
                                   parent: index,
                                   disjunctionGroup: index2
                               })
@@ -333,12 +380,14 @@ export class Canvas {
                     nodes.indexOf({
                         id: unit.id,
                         code: prereq,
+                        study_area: unit.study_area,
                         parent: index,
                         disjunctionGroup: index2
                     }) === -1
                         ? nodes.push({
                               id: unit.id,
                               code: prereq,
+                              study_area: unit.study_area,
                               parent: index,
                               disjunctionGroup: index2
                           })
@@ -353,15 +402,18 @@ export class Canvas {
     formatNode(
         unitLinks: Array<UnitPrerequisiteLink>
     ): [Array<NetworkNode>, Array<NetworkLink>] {
-        var networkNodes: Array<NetworkNode> = [];
-        var networkLinks: Array<NetworkLink> = [];
+        const networkNodes: Array<NetworkNode> = [];
+        const networkLinks: Array<NetworkLink> = [];
 
-        var currentHeadIndex = -1;
-        var currentHead = '';
+        let currentHeadIndex = -1;
+        let currentHead = '';
 
         unitLinks.forEach((unitLink) => {
-            networkNodes.map((e) => e.code).indexOf(unitLink.code) === -1
-                ? networkNodes.push({ index: unitLink.id, code: unitLink.code })
+            networkNodes.map((e) => e.id).indexOf(unitLink.code) === -1
+                ? networkNodes.push({
+                      id: unitLink.code,
+                      group: unitLink.study_area
+                  })
                 : {};
             if (unitLink.parent != currentHeadIndex) {
                 // Head node
@@ -370,7 +422,6 @@ export class Canvas {
             } else {
                 // Children of head node
                 networkLinks.push({
-                    index: unitLink.id,
                     source: currentHead,
                     target: unitLink.code,
                     group: unitLink.disjunctionGroup

@@ -14,7 +14,7 @@ import d3Logo from '@assets/icons/d3_js.svg';
 import arrowIcon from '@assets/icons/arrow_right.svg';
 import '@assets/styles/index.scss';
 
-let p = new Promise((resolve) => {
+const p = new Promise((resolve) => {
     ReactDOM.render(
         <React.StrictMode>
             <App />
@@ -30,26 +30,24 @@ let p = new Promise((resolve) => {
                 alt="d3 JS"
             />
         </React.StrictMode>,
-        document.getElementById('main-root')
+        document.getElementById('main-root'),
+        () => resolve(true)
     );
-
-    resolve(true);
 });
 
 function main() {
-    let img = document.getElementById('d3-logo');
+    const img = document.getElementById('d3-logo');
     if (img) (img as HTMLImageElement).src = d3Logo;
 
-    let sidebar = document.getElementById('sidebar');
-    let sidebarBtn = document.getElementById('sidebar-btn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarBtn = document.getElementById('sidebar-btn');
 
     if (sidebar && sidebarBtn) new SidebarComponent(sidebar, sidebarBtn);
 
-    let img2 = document.getElementById('sidebar-btn-icon');
+    const img2 = document.getElementById('sidebar-btn-icon');
     if (img2) (img2 as HTMLImageElement).src = arrowIcon;
 
-    let app = document.getElementById('app');
-    if (app) new Canvas(app);
+    new Canvas('#app');
 }
 
 p.then(main);

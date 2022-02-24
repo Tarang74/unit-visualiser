@@ -26,7 +26,7 @@ import classnames, {
 import './styles.scss';
 
 export interface SidebarComponent {
-    sidebarOpen: Boolean;
+    sidebarOpen: boolean;
     sidebar: HTMLElement;
     sidebarButton: HTMLElement;
     changeState(self: SidebarComponent): void;
@@ -53,7 +53,7 @@ export class SidebarComponent {
             this.sidebar.classList.add('sidebar-opened');
 
             // Wait for transition to end
-            let t = transitionEvent(this.sidebar);
+            const t = transitionEvent(this.sidebar);
             if (t) {
                 this.sidebar.addEventListener(t, () => {
                     this.openSidebar();
@@ -64,7 +64,7 @@ export class SidebarComponent {
             this.sidebar.classList.add('sidebar-closed');
 
             // Wait for transition to end
-            let t = transitionEvent(this.sidebar);
+            const t = transitionEvent(this.sidebar);
             if (t) {
                 this.sidebar.addEventListener(t, () => {
                     this.closeSidebar();
