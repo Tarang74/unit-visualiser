@@ -2,7 +2,10 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import { getUnitInfo, UnitOptions } from '@services/unitSelection';
-import { UNIT_STUDY_AREAS } from '@assets/data/Unit Data';
+import {
+    UNIT_STUDY_AREAS,
+    UNIT_PREREQUISITE_INDICES
+} from '@assets/data/Unit Data';
 
 import * as d3 from 'd3';
 
@@ -21,15 +24,16 @@ import classnames, {
 
 import './styles.scss';
 import { NetworkNode, NetworkLink } from '@interfaces/index';
-import { BaseType, D3DragEvent, D3ZoomEvent } from 'd3';
+import { D3DragEvent, D3ZoomEvent } from 'd3';
 
 export interface Canvas {
-    color: d3.ScaleOrdinal<string, string, never>;
+    linkColor: d3.ScaleOrdinal<number, string, never>;
+    nodeColor: d3.ScaleOrdinal<string, string, never>;
 
     svg: d3.Selection<SVGSVGElement, NetworkNode, HTMLElement, unknown>;
     zoomGroup: d3.Selection<SVGGElement, NetworkNode, HTMLElement, unknown>;
-    nodes: d3.Selection<SVGGElement, NetworkNode, HTMLElement, unknown>;
     links: d3.Selection<SVGGElement, NetworkNode, HTMLElement, unknown>;
+    nodes: d3.Selection<SVGGElement, NetworkNode, HTMLElement, unknown>;
 
     width: number;
     height: number;
@@ -62,8 +66,20 @@ export class Canvas {
 
         this.displayedUnits = [];
 
-        const types = Array.from(new Set(UNIT_STUDY_AREAS));
-        this.color = d3.scaleOrdinal(types, d3.schemeCategory10);
+        // const study_areas = Array.from(new Set(UNIT_STUDY_AREAS));
+        let max_length = 0;
+
+        UNIT_PREREQUISITE_INDICES.forEach((value) => {
+            if (value.length > max_length) {
+                max_length = value.length;
+            }
+        });
+
+        const groups = new Set([...Array(max_length).keys()]);
+        this.linkColor = d3.scaleOrdinal(groups, d3.schemeCategory10);
+
+        const study_areas = new Set(UNIT_STUDY_AREAS);
+        this.nodeColor = d3.scaleOrdinal(study_areas, d3.schemeCategory10);
 
         this.svg = d3
             .select<SVGSVGElement, NetworkNode>(selector)
@@ -75,23 +91,24 @@ export class Canvas {
         this.svg
             .append('defs')
             .selectAll('marker')
-            .data(types)
+            .data(groups)
             .join('marker')
+            .attr('class', 'arrow')
             .attr('id', (d) => `arrow-${d}`)
             .attr('viewBox', '0 -5 10 10')
             .attr('refX', 38)
             .attr('refY', 0)
-            .attr('markerWidth', 6)
+            .attr('markerWidth', 12)
             .attr('markerHeight', 6)
             .attr('orient', 'auto')
             .append('path')
-            .attr('fill', this.color)
+            .attr('fill', this.linkColor)
             .attr('d', 'M0,-5L10,0L0,5');
 
         this.zoomGroup = this.svg.append('g').attr('class', 'zoom-group');
 
-        this.nodes = this.zoomGroup.append('g').attr('class', 'nodes');
         this.links = this.zoomGroup.append('g').attr('class', 'links');
+        this.nodes = this.zoomGroup.append('g').attr('class', 'nodes');
 
         this.updateVariables(container);
         window.onresize = () => {
@@ -104,6 +121,7 @@ export class Canvas {
 
         const unitSelector = new UnitOptions();
 
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
 
         const selection = () => {
@@ -211,47 +229,31 @@ export class Canvas {
         console.log(nodeData);
         console.log(linkData);
 
-        function drag() {
-            // selection: d3.Selection<
-            //     BaseType | SVGCircleElement,
-            //     NetworkNode,
-            //     SVGGElement,
-            //     NetworkNode
-            // >,
-            // simulation: d3.Simulation<NetworkNode, NetworkLink>
-            console.log(simulation);
+        function dragStarted(
+            event: D3DragEvent<SVGGElement, NetworkNode, unknown>,
+            d: NetworkNode
+        ) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
 
-            function dragStarted(
-                event: D3DragEvent<SVGCircleElement, NetworkNode, unknown>,
-                d: NetworkNode
-            ) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            }
+        function dragged(
+            event: D3DragEvent<SVGGElement, NetworkNode, unknown>,
+            d: NetworkNode
+        ) {
+            console.log('dragging');
+            d.fx = event.x;
+            d.fy = event.y;
+        }
 
-            function dragged(
-                event: D3DragEvent<SVGCircleElement, NetworkNode, unknown>,
-                d: NetworkNode
-            ) {
-                d.fx = event.x;
-                d.fy = event.y;
-            }
-
-            function dragEnded(
-                event: D3DragEvent<SVGCircleElement, NetworkNode, unknown>,
-                d: NetworkNode
-            ) {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-            }
-
-            return d3
-                .drag<SVGCircleElement, NetworkNode>()
-                .on('start', dragStarted)
-                .on('drag', dragged)
-                .on('end', dragEnded);
+        function dragEnded(
+            event: D3DragEvent<SVGGElement, NetworkNode, unknown>,
+            d: NetworkNode
+        ) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
         }
 
         const simulation = d3
@@ -260,39 +262,36 @@ export class Canvas {
                 'link',
                 d3.forceLink<NetworkNode, NetworkLink>(linkData).id((d) => d.id)
             )
-            .force('charge', d3.forceManyBody<NetworkNode>().strength(-300))
+            .force('charge', d3.forceManyBody<NetworkNode>().strength(800))
             .force('center', d3.forceCenter(this.width / 2, this.height / 2))
             .force('x', d3.forceX())
             .force('y', d3.forceY())
-            .force(
-                'collide',
-                d3.forceCollide(() => 65)
-            );
+            .force('collide', d3.forceCollide(75));
 
         const link = this.links
             .selectAll('line')
             .data(linkData)
             .join('line')
-            .attr('stroke', (d) => this.color(d.group.toString()));
+            .attr('class', 'link')
+            .attr('stroke', (d) => this.linkColor(d.group))
+            .attr('marker-end', (d) => `url(#arrow-${d.group})`);
 
         const node = this.nodes
-            .selectAll('circle')
+            .selectAll<SVGGElement, SVGGElement>('.node')
             .data(nodeData)
-            .join('circle')
-            .attr('stroke', 'white')
-            .attr('stroke-width', 1.5)
-            .attr('r', 25)
-            .attr('fill', () => '#6baed6')
-            .call(drag);
+            .join('g')
+            .attr('class', 'node')
+            .call(
+                d3
+                    .drag<SVGGElement, NetworkNode>()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded)
+            );
 
-        // node.append('text')
-        //     .attr('x', 30 + 4)
-        //     .attr('y', '0.31em')
-        //     .text((d) => d.id)
-        //     .lower()
-        //     .attr('fill', 'none')
-        //     .attr('stroke', 'white')
-        //     .attr('stroke-width', 3);
+        node.append('circle').attr('fill', (d) => this.nodeColor(d.group));
+
+        node.append('text').text((d) => d.id);
 
         let lastK = 0;
 
@@ -306,10 +305,7 @@ export class Canvas {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .attr('y2', (d: any) => d.target.y);
 
-            node.attr('cx', (d) => (d.x !== undefined ? d.x : null)).attr(
-                'cy',
-                (d) => (d.y !== undefined ? d.y : null)
-            );
+            node.attr('transform', (d) => 'translate(' + d.x + ',' + d.y + ')');
         });
 
         const zoomed = (event: D3ZoomEvent<SVGSVGElement, NetworkNode>) => {
@@ -327,13 +323,11 @@ export class Canvas {
                     [0, 0],
                     [this.width, this.height]
                 ])
-                .scaleExtent([1, 80])
+                .scaleExtent([1 / 8, 80])
                 .on('zoom', zoomed)
         );
 
         return this.svg.node();
-
-        // node.on('dblclick', (e, d) => console.log(d));
     }
 
     findNodesRecursively(
