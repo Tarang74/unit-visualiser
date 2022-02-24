@@ -49,7 +49,7 @@
     },
     "name": "unitvisualiser",
     "description": "Unit Visualiser for QUT units.",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "main": "src/index.tsx",
     "repository": {
         "type": "git",

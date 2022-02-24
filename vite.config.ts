@@ -16,5 +16,8 @@ export default defineConfig({
             '@testing': path.resolve(__dirname, 'src/testing'),
             '@types': path.resolve(__dirname, 'src/types')
         }
+    },
+    build: {
+        outDir: path.resolve(__dirname, 'dist/unit-visualiser')
     }
 });
