@@ -24,6 +24,7 @@ specifiers:
   gh-pages: ^3.2.3
   husky: ^7.0.4
   jest: ^27.5.1
+  pnpm: ^6.32.1
   postcss: ^8.4.6
   prettier: ^2.5.1
   react: ^17.0.2
@@ -36,6 +37,7 @@ specifiers:
   vite: ^2.8.4
 
 dependencies:
+  pnpm: 6.32.1
   react: 17.0.2
   react-dom: 17.0.2_react@17.0.2
 
@@ -4864,6 +4866,12 @@ packages:
     dependencies:
       find-up: 4.1.0
     dev: true
+
+  /pnpm/6.32.1:
+    resolution: {integrity: sha512-vca5B8nbIHSCEIaV7UG1C15v54txazI9u3HhQ0OJad2u8DSzBaFnWiHN7D6EoDg6t5bu/yC1/lShtt+0uFJXFg==}
+    engines: {node: '>=12.17'}
+    hasBin: true
+    dev: false
 
   /postcss-js/4.0.0_postcss@8.4.6:
     resolution: {integrity: sha512-77QESFBwgX4irogGVPgQ5s07vLvFqWr228qZY+w6lW599cRlK/HmnlivnnVUxkjHnCu4J16PDMHcH+e+2HbvTQ==}
