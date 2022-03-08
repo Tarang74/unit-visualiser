@@ -24,7 +24,7 @@ import classnames, {
 
 import './styles.scss';
 import { NetworkNode, NetworkLink } from '@interfaces/index';
-import { D3DragEvent, D3ZoomEvent } from 'd3';
+import { D3DragEvent, D3ZoomEvent, EnterElement } from 'd3';
 
 export interface Canvas {
     linkColor: d3.ScaleOrdinal<number, string, never>;
@@ -260,11 +260,11 @@ export class Canvas {
                 'link',
                 d3.forceLink<NetworkNode, NetworkLink>(linkData).id((d) => d.id)
             )
-            .force('charge', d3.forceManyBody<NetworkNode>().strength(800))
+            .force('charge', d3.forceManyBody<NetworkNode>().strength(100))
             .force('center', d3.forceCenter(this.width / 2, this.height / 2))
             .force('x', d3.forceX())
             .force('y', d3.forceY())
-            .force('collide', d3.forceCollide(75));
+            .force('collide', d3.forceCollide(100));
 
         const link = this.links
             .selectAll('line')
@@ -280,25 +280,23 @@ export class Canvas {
             );
 
         const node = this.nodes
-            .selectAll<SVGGElement, SVGGElement>('.node')
+            .selectAll<SVGGElement, NetworkNode>('.node')
             .data(nodeData)
             .join(
-                (enter) =>
-                    enter
-                        .append('g')
-                        .attr('class', 'node')
-                        .call(
-                            d3
-                                .drag<SVGGElement, NetworkNode>()
-                                .on('start', dragStarted)
-                                .on('drag', dragged)
-                                .on('end', dragEnded)
-                        ),
+                (enter) => enter.append('g').attr('class', 'node'),
                 (update) => update.transition().duration(500)
             );
 
         node.append('rect').attr('fill', (d) => this.nodeColor(d.group));
         node.append('text').text((d) => d.id);
+
+        node.call(
+            d3
+                .drag<SVGGElement, NetworkNode>()
+                .on('start', dragStarted)
+                .on('drag', dragged)
+                .on('end', dragEnded)
+        );
 
         let lastK = 0;
 

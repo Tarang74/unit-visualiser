@@ -17,7 +17,9 @@ export default defineConfig({
             '@types': path.resolve(__dirname, 'src/types')
         }
     },
+    base: 'https://tarang74.github.io/unit-visualiser/',
     build: {
-        outDir: path.resolve(__dirname, 'dist/unit-visualiser')
+        emptyOutDir: true,
+        outDir: path.resolve(__dirname, 'dist')
     }
 });

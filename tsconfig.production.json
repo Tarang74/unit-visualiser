@@ -1,7 +1,8 @@
 {
     "compilerOptions": {
         "module": "ESNext",
-        "target": "ES2016"
+        "target": "ES2016",
+        "outDir": "dist"
     },
     "extends": "./tsconfig.common.json"
 }
